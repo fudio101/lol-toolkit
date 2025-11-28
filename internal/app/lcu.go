@@ -7,17 +7,24 @@ import (
 // LCUStatus represents the League client connection status.
 type LCUStatus struct {
 	Connected bool   `json:"connected"`
+	Port      string `json:"port,omitempty"`
+	AuthToken string `json:"authToken,omitempty"`
 	Error     string `json:"error,omitempty"`
 }
 
 // GetLCUStatus checks if the League client is running.
 func (a *App) GetLCUStatus() *LCUStatus {
-	if lcu.IsClientRunning() {
-		return &LCUStatus{Connected: true}
+	info := lcu.GetConnectionInfo()
+	if info == nil {
+		return &LCUStatus{
+			Connected: false,
+			Error:     "League client not running",
+		}
 	}
 	return &LCUStatus{
-		Connected: false,
-		Error:     "League client not running",
+		Connected: true,
+		Port:      info.Port,
+		AuthToken: info.AuthToken,
 	}
 }
 

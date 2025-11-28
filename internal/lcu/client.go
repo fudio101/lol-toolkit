@@ -107,6 +107,24 @@ func IsClientRunning() bool {
 	return err == nil
 }
 
+// ConnectionInfo holds connection details for external use.
+type ConnectionInfo struct {
+	Port      string `json:"port"`
+	AuthToken string `json:"authToken"`
+}
+
+// GetConnectionInfo returns the current LCU connection info, or nil if not connected.
+func GetConnectionInfo() *ConnectionInfo {
+	port, token, err := getConnectionInfo()
+	if err != nil {
+		return nil
+	}
+	return &ConnectionInfo{
+		Port:      port,
+		AuthToken: token,
+	}
+}
+
 // ClearCache clears the cached connection info.
 func ClearCache() {
 	cacheMutex.Lock()

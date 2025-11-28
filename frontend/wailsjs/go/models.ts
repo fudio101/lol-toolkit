@@ -2,6 +2,8 @@ export namespace app {
 	
 	export class LCUStatus {
 	    connected: boolean;
+	    port?: string;
+	    authToken?: string;
 	    error?: string;
 	
 	    static createFrom(source: any = {}) {
@@ -11,6 +13,8 @@ export namespace app {
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.connected = source["connected"];
+	        this.port = source["port"];
+	        this.authToken = source["authToken"];
 	        this.error = source["error"];
 	    }
 	}

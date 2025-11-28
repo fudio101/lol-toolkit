@@ -11,7 +11,7 @@ export function UserCard({ summoner, onRefresh }: UserCardProps) {
     if (!summoner) {
         return (
             <div className="user-card">
-                <div className="user-loading">Loading summoner...</div>
+                <div className="user-loading">Loading summoner data...</div>
             </div>
         );
     }
@@ -22,7 +22,7 @@ export function UserCard({ summoner, onRefresh }: UserCardProps) {
         <div className="user-card">
             <div className="user-avatar">
                 <img src={profileIconUrl} alt="Profile Icon" />
-                <span className="status-dot online" title="Online" />
+                <span className="status-dot" />
             </div>
             <div className="user-info">
                 <div className="user-name">
@@ -37,7 +37,7 @@ export function UserCard({ summoner, onRefresh }: UserCardProps) {
                             style={{ width: `${summoner.percentCompleteForNextLevel}%` }}
                         />
                     </div>
-                    <span className="xp-text">{summoner.percentCompleteForNextLevel}%</span>
+                    <span className="xp-text">{summoner.percentCompleteForNextLevel}% to next level</span>
                 </div>
             </div>
             <button className="refresh-small" onClick={onRefresh} title="Refresh">
@@ -46,4 +46,3 @@ export function UserCard({ summoner, onRefresh }: UserCardProps) {
         </div>
     );
 }
-
