@@ -41,13 +41,13 @@ function App() {
                 <Header title={TAB_TITLES[activeTab] || 'Dashboard'} />
                 
                 <div className="content-area">
-                    {!isConnected ? (
-                        <NotConnectedMessage onRefresh={refresh} />
-                    ) : !isConfigured ? (
-                        <ApiKeyRequiredMessage />
-                    ) : (
-                        <TabContent tab={activeTab} summoner={summoner} onRefresh={refresh} />
-                    )}
+                    <TabContent 
+                        tab={activeTab} 
+                        summoner={summoner} 
+                        onRefresh={refresh}
+                        isConnected={isConnected}
+                        isConfigured={isConfigured}
+                    />
                 </div>
             </main>
         </div>
@@ -85,9 +85,33 @@ interface TabContentProps {
     tab: TabId;
     summoner: any;
     onRefresh: () => void;
+    isConnected: boolean;
+    isConfigured: boolean;
 }
 
-function TabContent({ tab, summoner, onRefresh }: TabContentProps) {
+// Tabs that don't require LCU connection
+const CONNECTION_FREE_TABS: TabId[] = ['settings', 'debug'];
+
+function TabContent({ tab, summoner, onRefresh, isConnected, isConfigured }: TabContentProps) {
+    // Settings and Debug are always accessible
+    if (CONNECTION_FREE_TABS.includes(tab)) {
+        switch (tab) {
+            case 'settings':
+                return <SettingsTab />;
+            case 'debug':
+                return <DebugTab summoner={summoner} />;
+        }
+    }
+
+    // Other tabs require connection
+    if (!isConnected) {
+        return <NotConnectedMessage onRefresh={onRefresh} />;
+    }
+
+    if (!isConfigured) {
+        return <ApiKeyRequiredMessage />;
+    }
+
     switch (tab) {
         case 'home':
             return <HomeTab summoner={summoner} onRefresh={onRefresh} />;
@@ -97,10 +121,6 @@ function TabContent({ tab, summoner, onRefresh }: TabContentProps) {
             return <ChampionsTab />;
         case 'matches':
             return <MatchesTab />;
-        case 'settings':
-            return <SettingsTab />;
-        case 'debug':
-            return <DebugTab summoner={summoner} />;
         default:
             return null;
     }

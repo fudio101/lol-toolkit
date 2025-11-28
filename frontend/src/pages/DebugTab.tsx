@@ -142,19 +142,29 @@ export function DebugTab({ summoner }: DebugTabProps) {
                                             >
                                                 {copiedId === `${log.id}-ps` ? '✓ Copied' : '📋 PowerShell'}
                                             </button>
-                                            {log.response && (
-                                                <button 
-                                                    className={`btn-copy ${copiedId === `${log.id}-response` ? 'copied' : ''}`}
-                                                    onClick={(e) => { e.stopPropagation(); copyToClipboard(JSON.stringify(log.response, null, 2), `${log.id}-response`); }}
-                                                >
-                                                    {copiedId === `${log.id}-response` ? '✓ Copied' : '📋 Response'}
-                                                </button>
-                                            )}
                                         </div>
                                         {log.error ? (
-                                            <pre className="api-log-error">{log.error}</pre>
+                                            <div className="api-log-code-block">
+                                                <button 
+                                                    className={`btn-copy-icon ${copiedId === `${log.id}-error` ? 'copied' : ''}`}
+                                                    onClick={(e) => { e.stopPropagation(); copyToClipboard(log.error!, `${log.id}-error`); }}
+                                                    title="Copy error"
+                                                >
+                                                    {copiedId === `${log.id}-error` ? '✓' : '📋'}
+                                                </button>
+                                                <pre className="api-log-error">{log.error}</pre>
+                                            </div>
                                         ) : log.response ? (
-                                            <pre className="api-log-response">{JSON.stringify(log.response, null, 2)}</pre>
+                                            <div className="api-log-code-block">
+                                                <button 
+                                                    className={`btn-copy-icon ${copiedId === `${log.id}-response` ? 'copied' : ''}`}
+                                                    onClick={(e) => { e.stopPropagation(); copyToClipboard(JSON.stringify(log.response, null, 2), `${log.id}-response`); }}
+                                                    title="Copy response"
+                                                >
+                                                    {copiedId === `${log.id}-response` ? '✓' : '📋'}
+                                                </button>
+                                                <pre className="api-log-response">{JSON.stringify(log.response, null, 2)}</pre>
+                                            </div>
                                         ) : null}
                                     </div>
                                 )}

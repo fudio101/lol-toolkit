@@ -931,6 +931,7 @@ body {
 .api-log-details {
     padding: 12px;
     border-top: 1px solid var(--border-light);
+    overflow-x: auto;
 }
 
 .api-log-copy-buttons {
@@ -972,6 +973,10 @@ body {
     padding: 12px;
     border-radius: var(--radius-sm);
     font-family: 'Fira Code', monospace;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    max-width: 100%;
     font-size: 0.75rem;
     overflow-x: auto;
     max-height: 200px;
@@ -985,4 +990,38 @@ body {
 
 .api-log-error {
     color: var(--error);
+}
+
+.api-log-code-block {
+    position: relative;
+}
+
+.api-log-code-block pre {
+    margin: 0;
+}
+
+.btn-copy-icon {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-sm);
+    padding: 4px 8px;
+    cursor: pointer;
+    font-size: 14px;
+    opacity: 0.7;
+    transition: all 0.2s ease;
+    z-index: 1;
+}
+
+.btn-copy-icon:hover {
+    opacity: 1;
+    background: var(--bg-hover);
+}
+
+.btn-copy-icon.copied {
+    background: var(--success);
+    color: white;
+    opacity: 1;
 }

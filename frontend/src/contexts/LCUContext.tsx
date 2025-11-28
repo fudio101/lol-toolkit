@@ -1,17 +1,16 @@
-import { createContext, useContext, useState, useEffect, useCallback, useRef, ReactNode } from 'react';
+import { createContext, useContext, useState, useCallback, useRef, ReactNode } from 'react';
 import { GetLCUStatus, GetCurrentSummoner } from "../../wailsjs/go/app/App";
 import { lcu, app } from "../../wailsjs/go/models";
 import { useApiLog } from './ApiLogContext';
+import { usePolling } from '../hooks';
 
-// Polling intervals
-const POLL_INTERVAL = {
-    STATUS_DISCONNECTED: 10_000,  // Check LCU status every 10s when not connected
-    STATUS_CONNECTED: 30_000,     // Check LCU status every 30s when connected
-    SUMMONER_INITIAL: 5_000,      // Retry summoner fetch every 5s until we get it
-    SUMMONER_REFRESH: 60_000,     // Refresh summoner data every 60s after initial fetch
+// Polling intervals (ms)
+const INTERVAL = {
+    STATUS_DISCONNECTED: 10_000,  // 10s - check if client started
+    STATUS_CONNECTED: 30_000,     // 30s - normal connected polling
+    SUMMONER_INITIAL: 5_000,      // 5s - waiting for summoner data
+    SUMMONER_REFRESH: 60_000,     // 60s - periodic summoner refresh
 } as const;
-
-const POLLING_INDICATOR_MS = 500;
 
 interface LCUContextType {
     status: app.LCUStatus | null;
@@ -20,7 +19,6 @@ interface LCUContextType {
     error: string | null;
     isPolling: boolean;
     refresh: () => Promise<void>;
-    refreshSummoner: () => Promise<void>;
 }
 
 const LCUContext = createContext<LCUContextType | null>(null);
@@ -30,17 +28,17 @@ export function LCUProvider({ children }: { children: ReactNode }) {
     const [summoner, setSummoner] = useState<lcu.CurrentSummoner | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const [isPolling, setIsPolling] = useState(false);
-    const isRefreshing = useRef(false);
-    const wasConnected = useRef(false);
+    
+    const statusRef = useRef(status);
+    statusRef.current = status;
+    
+    const summonerRef = useRef(summoner);
+    summonerRef.current = summoner;
+    
     const { addLog, updateLog } = useApiLog();
 
-    // Check LCU status only
-    const checkStatus = useCallback(async () => {
-        if (isRefreshing.current) return;
-        isRefreshing.current = true;
-        setIsPolling(true);
-
+    // === Status Polling ===
+    const fetchStatus = useCallback(async (): Promise<app.LCUStatus> => {
         const startTime = Date.now();
         const logId = addLog({
             type: 'lcu',
@@ -50,23 +48,13 @@ export function LCUProvider({ children }: { children: ReactNode }) {
         });
 
         try {
-            setError(null);
-            const lcuStatus = await GetLCUStatus();
+            const result = await GetLCUStatus();
             updateLog(logId, {
                 status: 'success',
                 duration: Date.now() - startTime,
-                response: lcuStatus,
+                response: result,
             });
-            setStatus(lcuStatus);
-
-            // If just connected, fetch summoner data
-            if (lcuStatus.connected && !wasConnected.current) {
-                wasConnected.current = true;
-                await fetchSummoner();
-            } else if (!lcuStatus.connected) {
-                wasConnected.current = false;
-                setSummoner(null);
-            }
+            return result;
         } catch (err) {
             const errorMsg = err instanceof Error ? err.message : String(err);
             updateLog(logId, {
@@ -74,20 +62,49 @@ export function LCUProvider({ children }: { children: ReactNode }) {
                 duration: Date.now() - startTime,
                 error: errorMsg,
             });
-            setError(errorMsg);
-            setStatus({ connected: false, error: errorMsg });
-            setSummoner(null);
-            wasConnected.current = false;
-        } finally {
-            setLoading(false);
-            isRefreshing.current = false;
-            setTimeout(() => setIsPolling(false), POLLING_INDICATOR_MS);
+            throw err;
         }
     }, [addLog, updateLog]);
 
-    // Fetch summoner data
-    const fetchSummoner = useCallback(async () => {
-        if (!status?.connected && !wasConnected.current) return;
+    const getStatusInterval = useCallback((result: app.LCUStatus | null): number => {
+        return result?.connected 
+            ? INTERVAL.STATUS_CONNECTED 
+            : INTERVAL.STATUS_DISCONNECTED;
+    }, []);
+
+    const handleStatusResult = useCallback((result: app.LCUStatus) => {
+        setStatus(result);
+        setError(null);
+        setLoading(false);
+        
+        // Clear summoner if disconnected
+        if (!result.connected) {
+            setSummoner(null);
+        }
+    }, []);
+
+    const handleStatusError = useCallback((err: Error) => {
+        setError(err.message);
+        setStatus({ connected: false, error: err.message });
+        setSummoner(null);
+        setLoading(false);
+    }, []);
+
+    const { isPolling: isPollingStatus, refresh: refreshStatus } = usePolling({
+        id: 'lcu-status',
+        enabled: true,
+        execute: fetchStatus,
+        getInterval: getStatusInterval,
+        onResult: handleStatusResult,
+        onError: handleStatusError,
+    });
+
+    // === Summoner Polling ===
+    const fetchSummoner = useCallback(async (): Promise<lcu.CurrentSummoner | null> => {
+        // Only fetch if connected
+        if (!statusRef.current?.connected) {
+            return null;
+        }
 
         const startTime = Date.now();
         const logId = addLog({
@@ -98,13 +115,13 @@ export function LCUProvider({ children }: { children: ReactNode }) {
         });
 
         try {
-            const summonerData = await GetCurrentSummoner();
+            const result = await GetCurrentSummoner();
             updateLog(logId, {
                 status: 'success',
                 duration: Date.now() - startTime,
-                response: summonerData,
+                response: result,
             });
-            setSummoner(summonerData);
+            return result;
         } catch (err) {
             const errorMsg = err instanceof Error ? err.message : String(err);
             updateLog(logId, {
@@ -112,57 +129,45 @@ export function LCUProvider({ children }: { children: ReactNode }) {
                 duration: Date.now() - startTime,
                 error: errorMsg,
             });
-            console.error('Failed to get summoner:', err);
-            setSummoner(null);
+            return null;
         }
-    }, [status?.connected, addLog, updateLog]);
+    }, [addLog, updateLog]);
 
-    // Manual refresh - checks status and fetches summoner
+    const getSummonerInterval = useCallback((result: lcu.CurrentSummoner | null): number => {
+        // If not connected, use longer interval (will be skipped anyway)
+        if (!statusRef.current?.connected) {
+            return INTERVAL.STATUS_DISCONNECTED;
+        }
+        // Faster polling until we have summoner data
+        return result ? INTERVAL.SUMMONER_REFRESH : INTERVAL.SUMMONER_INITIAL;
+    }, []);
+
+    const handleSummonerResult = useCallback((result: lcu.CurrentSummoner | null) => {
+        if (result) {
+            setSummoner(result);
+        }
+    }, []);
+
+    const { isPolling: isPollingSummoner, refresh: refreshSummoner } = usePolling({
+        id: 'lcu-summoner',
+        enabled: true,
+        execute: fetchSummoner,
+        getInterval: getSummonerInterval,
+        onResult: handleSummonerResult,
+    });
+
+    // Combined refresh
     const refresh = useCallback(async () => {
-        await checkStatus();
-    }, [checkStatus]);
-
-    // Manual summoner refresh
-    const refreshSummoner = useCallback(async () => {
-        if (status?.connected) {
-            await fetchSummoner();
-        }
-    }, [status?.connected, fetchSummoner]);
-
-    // Initial fetch
-    useEffect(() => {
-        checkStatus();
-    }, [checkStatus]);
-
-    // Poll status with adaptive interval
-    useEffect(() => {
-        const interval = status?.connected 
-            ? POLL_INTERVAL.STATUS_CONNECTED 
-            : POLL_INTERVAL.STATUS_DISCONNECTED;
-        const timer = setInterval(checkStatus, interval);
-        return () => clearInterval(timer);
-    }, [checkStatus, status?.connected]);
-
-    // Poll summoner with adaptive interval
-    useEffect(() => {
-        if (!status?.connected) return;
-
-        // Use faster interval until we have summoner data
-        const interval = summoner 
-            ? POLL_INTERVAL.SUMMONER_REFRESH 
-            : POLL_INTERVAL.SUMMONER_INITIAL;
-        const timer = setInterval(fetchSummoner, interval);
-        return () => clearInterval(timer);
-    }, [status?.connected, summoner, fetchSummoner]);
+        await Promise.all([refreshStatus(), refreshSummoner()]);
+    }, [refreshStatus, refreshSummoner]);
 
     const value: LCUContextType = {
         status,
         summoner,
         loading,
         error,
-        isPolling,
+        isPolling: isPollingStatus || isPollingSummoner,
         refresh,
-        refreshSummoner,
     };
 
     return (
