@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useCallback, useRef, ReactNode } from 'react';
+import { createContext, useContext, useState, useCallback, useRef, ReactNode, useEffect } from 'react';
 import { GetLCUStatus, GetCurrentSummoner } from "../../wailsjs/go/app/App";
 import { lcu, app } from "../../wailsjs/go/models";
 import { useApiLog } from './ApiLogContext';
@@ -29,15 +29,19 @@ export function LCUProvider({ children }: { children: ReactNode }) {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     
+    // Refs for tracking state and function references
     const statusRef = useRef(status);
     statusRef.current = status;
     
-    const summonerRef = useRef(summoner);
-    summonerRef.current = summoner;
+    const prevConnectedRef = useRef<boolean | null>(null);
+    const summonerRefreshRef = useRef<(() => Promise<void>) | null>(null);
     
     const { addLog, updateLog } = useApiLog();
 
-    // === Status Polling ===
+    // ============================================================================
+    // Status Polling
+    // ============================================================================
+
     const fetchStatus = useCallback(async (): Promise<app.LCUStatus> => {
         const startTime = Date.now();
         const logId = addLog({
@@ -99,7 +103,10 @@ export function LCUProvider({ children }: { children: ReactNode }) {
         onError: handleStatusError,
     });
 
-    // === Summoner Polling ===
+    // ============================================================================
+    // Summoner Polling
+    // ============================================================================
+
     const fetchSummoner = useCallback(async (): Promise<lcu.CurrentSummoner | null> => {
         // Only fetch if connected
         if (!statusRef.current?.connected) {
@@ -134,11 +141,10 @@ export function LCUProvider({ children }: { children: ReactNode }) {
     }, [addLog, updateLog]);
 
     const getSummonerInterval = useCallback((result: lcu.CurrentSummoner | null): number => {
-        // If not connected, use longer interval (will be skipped anyway)
         if (!statusRef.current?.connected) {
             return INTERVAL.STATUS_DISCONNECTED;
         }
-        // Faster polling until we have summoner data
+        // Faster polling until we have summoner data, then slower refresh
         return result ? INTERVAL.SUMMONER_REFRESH : INTERVAL.SUMMONER_INITIAL;
     }, []);
 
@@ -156,7 +162,37 @@ export function LCUProvider({ children }: { children: ReactNode }) {
         onResult: handleSummonerResult,
     });
 
-    // Combined refresh
+    // ============================================================================
+    // Connection Transition Handler
+    // ============================================================================
+
+    // Store refresh function in ref for transition handler
+    useEffect(() => {
+        summonerRefreshRef.current = refreshSummoner;
+    }, [refreshSummoner]);
+
+    // Watch for connection state changes and immediately fetch summoner on connect
+    useEffect(() => {
+        const isNowConnected = status?.connected ?? false;
+        const wasConnected = prevConnectedRef.current;
+
+        // Detect transition: (null/false) → true
+        // This handles both first-time connection and reconnection
+        const isNewlyConnected = (wasConnected === null || wasConnected === false) && isNowConnected === true;
+
+        if (isNewlyConnected && summonerRefreshRef.current) {
+            // Immediately fetch summoner and reset polling timer
+            summonerRefreshRef.current();
+        }
+
+        // Update ref for next check
+        prevConnectedRef.current = isNowConnected;
+    }, [status?.connected]);
+
+    // ============================================================================
+    // Public API
+    // ============================================================================
+
     const refresh = useCallback(async () => {
         await Promise.all([refreshStatus(), refreshSummoner()]);
     }, [refreshStatus, refreshSummoner]);
