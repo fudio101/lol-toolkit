@@ -17,9 +17,9 @@ A League of Legends toolkit desktop application built with Go + React.
 
 ## Setup
 
-### 1. Create Embedded Config (Required)
+### 1. Create Config File (Required)
 
-Create `internal/config/embedded.json`:
+Create `internal/config/config.json`:
 
 ```json
 {
@@ -28,7 +28,7 @@ Create `internal/config/embedded.json`:
 }
 ```
 
-### 2. (Optional) Add Your Riot API Key
+### 2. Add Your Riot API Key
 
 Get your API key from [Riot Developer Portal](https://developer.riotgames.com/).
 
@@ -40,6 +40,8 @@ Get your API key from [Riot Developer Portal](https://developer.riotgames.com/).
 ```
 
 > ⚠️ This file is gitignored. Your API key will be embedded in the built executable.
+> 
+> ⚠️ Development API keys expire every **24 hours**. Regenerate at [developer.riotgames.com](https://developer.riotgames.com/).
 
 ### Available Regions
 
@@ -72,7 +74,8 @@ lol-toolkit/
 ├── internal/
 │   ├── app/                     # App logic (exposed to frontend)
 │   ├── config/
-│   │   └── embedded.json        # ← CREATE THIS FILE
+│   │   ├── config.go
+│   │   └── config.json          # ← CREATE THIS FILE
 │   └── lol/                     # Riot API client
 ├── frontend/                    # React + TypeScript
 └── wails.json

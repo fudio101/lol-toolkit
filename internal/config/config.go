@@ -8,9 +8,9 @@ import (
 )
 
 // Embed the config file into the binary
-// Create configs/embedded.json with your API key before building
+// Create internal/config/config.json with your API key before building
 //
-//go:embed embedded.json
+//go:embed config.json
 var embeddedConfig []byte
 
 // Config holds the application configuration

@@ -1,3 +1,22 @@
+export namespace app {
+	
+	export class LCUStatus {
+	    connected: boolean;
+	    error?: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new LCUStatus(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.connected = source["connected"];
+	        this.error = source["error"];
+	    }
+	}
+
+}
+
 export namespace config {
 	
 	export class Config {
@@ -13,6 +32,87 @@ export namespace config {
 	        this.riot_api_key = source["riot_api_key"];
 	        this.region = source["region"];
 	    }
+	}
+
+}
+
+export namespace lcu {
+	
+	export class RerollPoints {
+	    currentPoints: number;
+	    maxRolls: number;
+	    numberOfRolls: number;
+	    pointsCostToRoll: number;
+	    pointsToReroll: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new RerollPoints(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.currentPoints = source["currentPoints"];
+	        this.maxRolls = source["maxRolls"];
+	        this.numberOfRolls = source["numberOfRolls"];
+	        this.pointsCostToRoll = source["pointsCostToRoll"];
+	        this.pointsToReroll = source["pointsToReroll"];
+	    }
+	}
+	export class CurrentSummoner {
+	    accountId: number;
+	    displayName: string;
+	    gameName: string;
+	    tagLine: string;
+	    internalName: string;
+	    nameChangeFlag: boolean;
+	    percentCompleteForNextLevel: number;
+	    profileIconId: number;
+	    puuid: string;
+	    rerollPoints: RerollPoints;
+	    summonerId: number;
+	    summonerLevel: number;
+	    xpSinceLastLevel: number;
+	    xpUntilNextLevel: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new CurrentSummoner(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.accountId = source["accountId"];
+	        this.displayName = source["displayName"];
+	        this.gameName = source["gameName"];
+	        this.tagLine = source["tagLine"];
+	        this.internalName = source["internalName"];
+	        this.nameChangeFlag = source["nameChangeFlag"];
+	        this.percentCompleteForNextLevel = source["percentCompleteForNextLevel"];
+	        this.profileIconId = source["profileIconId"];
+	        this.puuid = source["puuid"];
+	        this.rerollPoints = this.convertValues(source["rerollPoints"], RerollPoints);
+	        this.summonerId = source["summonerId"];
+	        this.summonerLevel = source["summonerLevel"];
+	        this.xpSinceLastLevel = source["xpSinceLastLevel"];
+	        this.xpUntilNextLevel = source["xpUntilNextLevel"];
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
 	}
 
 }

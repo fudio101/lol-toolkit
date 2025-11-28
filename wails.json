@@ -9,7 +9,7 @@
   "frontend:dev:serverUrl": "auto",
   "wailsjsdir": "./frontend",
   "build:dir": "build",
-  "reloaddirs": "internal,configs",
+  "reloaddirs": "internal",
   "debounceMS": 100,
   "author": {
     "name": "fudio101",

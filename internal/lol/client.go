@@ -7,13 +7,17 @@ import (
 	"github.com/KnutZuidema/golio/api"
 )
 
-// Client wraps the golio client for League of Legends API
+// Default region when not specified.
+const DefaultRegion = "vn2"
+
+// Client wraps the golio client with rate limiting.
 type Client struct {
-	golio  *golio.Client
-	region api.Region
+	golio       *golio.Client
+	region      api.Region
+	rateLimiter *RateLimiter
 }
 
-// regionMap maps region strings to golio Region constants
+// regionMap maps region codes to golio Region constants.
 var regionMap = map[string]api.Region{
 	"br1":  api.RegionBrasil,
 	"eun1": api.RegionEuropeNorthEast,
@@ -33,31 +37,46 @@ var regionMap = map[string]api.Region{
 	"vn2":  api.RegionVietnam,
 }
 
-// NewClient creates a new LoL API client
-func NewClient(apiKey string, region string) (*Client, error) {
+// NewClient creates a new LoL API client with rate limiting.
+func NewClient(apiKey, region string) (*Client, error) {
 	if apiKey == "" {
-		return nil, fmt.Errorf("API key is required")
+		return nil, fmt.Errorf("api key is required")
 	}
 
-	r, ok := regionMap[region]
-	if !ok {
-		r = api.RegionVietnam // Default to Vietnam
-	}
-
+	r := parseRegion(region)
 	client := golio.NewClient(apiKey, golio.WithRegion(r))
 
 	return &Client{
-		golio:  client,
-		region: r,
+		golio:       client,
+		region:      r,
+		rateLimiter: NewRateLimiter(),
 	}, nil
 }
 
-// GetGolio returns the underlying golio client for direct access
+// parseRegion converts region string to api.Region.
+func parseRegion(region string) api.Region {
+	if r, ok := regionMap[region]; ok {
+		return r
+	}
+	return api.RegionVietnam
+}
+
+// waitForRateLimit blocks until rate limit allows a request.
+func (c *Client) waitForRateLimit() {
+	c.rateLimiter.Wait()
+}
+
+// GetGolio returns the underlying golio client.
 func (c *Client) GetGolio() *golio.Client {
 	return c.golio
 }
 
-// GetRegion returns the current region
+// GetRegion returns the current region.
 func (c *Client) GetRegion() api.Region {
 	return c.region
+}
+
+// GetRateLimitStatus returns current rate limit usage.
+func (c *Client) GetRateLimitStatus() (shortUsed, shortLimit, longUsed, longLimit int) {
+	return c.rateLimiter.GetStatus()
 }

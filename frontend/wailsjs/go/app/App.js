@@ -18,8 +18,16 @@ export function GetConfig() {
   return window['go']['app']['App']['GetConfig']();
 }
 
+export function GetCurrentSummoner() {
+  return window['go']['app']['App']['GetCurrentSummoner']();
+}
+
 export function GetGrandmasters(arg1) {
   return window['go']['app']['App']['GetGrandmasters'](arg1);
+}
+
+export function GetLCUStatus() {
+  return window['go']['app']['App']['GetLCUStatus']();
 }
 
 export function GetMasters(arg1) {
@@ -40,10 +48,6 @@ export function GetSummonerByPUUID(arg1) {
 
 export function GetTotalMasteryScore(arg1) {
   return window['go']['app']['App']['GetTotalMasteryScore'](arg1);
-}
-
-export function Greet(arg1) {
-  return window['go']['app']['App']['Greet'](arg1);
 }
 
 export function IsConfigured() {

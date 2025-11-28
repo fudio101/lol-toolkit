@@ -4,6 +4,7 @@ build/bin
 # Frontend
 node_modules
 frontend/dist
+*.timestamp-*.mjs
 
 # IDE
 .idea/
@@ -24,14 +25,8 @@ Thumbs.db
 *.test
 *.out
 
-# Config (contains API keys)
-configs/*.yaml
-configs/*.json
-!configs/*.example.yaml
-!configs/*.example.json
-
-# Embedded config with API key (DO NOT COMMIT)
-internal/config/embedded.json
+# Config with API key (DO NOT COMMIT)
+internal/config/config.json
 
 # Logs
 *.log

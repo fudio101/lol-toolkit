@@ -2,78 +2,83 @@ package app
 
 import (
 	"context"
-	"fmt"
 
 	"lol-toolkit/internal/config"
 	"lol-toolkit/internal/lol"
 )
 
-// App struct holds the application state and dependencies
+// App holds application state and dependencies.
 type App struct {
 	ctx       context.Context
 	config    *config.Config
 	lolClient *lol.Client
 }
 
-// New creates a new App instance
+// New creates a new App instance.
 func New() *App {
 	return &App{}
 }
 
-// Startup is called when the app starts. The context is saved
-// so we can call the runtime methods
+// Startup initializes the app when Wails starts.
 func (a *App) Startup(ctx context.Context) {
 	a.ctx = ctx
+	a.loadConfig()
+	a.initLolClient()
+}
 
-	// Load configuration
+// Shutdown cleans up resources when the app closes.
+func (a *App) Shutdown(_ context.Context) {
+	// Cleanup if needed
+}
+
+// loadConfig loads the configuration.
+func (a *App) loadConfig() {
 	cfg, err := config.Load()
 	if err != nil {
-		// Use default config if loading fails
 		cfg = config.Default()
 	}
 	a.config = cfg
+}
 
-	// Initialize LoL client if API key is configured
-	if cfg.RiotAPIKey != "" {
-		client, err := lol.NewClient(cfg.RiotAPIKey, cfg.Region)
-		if err == nil {
-			a.lolClient = client
-		}
+// initLolClient initializes the LoL API client.
+func (a *App) initLolClient() {
+	if a.config.RiotAPIKey == "" {
+		return
 	}
+
+	client, err := lol.NewClient(a.config.RiotAPIKey, a.config.Region)
+	if err != nil {
+		return
+	}
+	a.lolClient = client
 }
 
-// Shutdown is called when the app is closing
-func (a *App) Shutdown(ctx context.Context) {
-	// Cleanup resources if needed
-}
-
-// GetConfig returns the current configuration (for frontend)
+// GetConfig returns the current configuration.
 func (a *App) GetConfig() *config.Config {
 	return a.config
 }
 
-// SetAPIKey updates the Riot API key
+// SetAPIKey updates the Riot API key and reinitializes the client.
 func (a *App) SetAPIKey(apiKey string) error {
 	a.config.RiotAPIKey = apiKey
 
-	// Reinitialize client with new key
 	if apiKey != "" {
 		client, err := lol.NewClient(apiKey, a.config.Region)
 		if err != nil {
 			return err
 		}
 		a.lolClient = client
+	} else {
+		a.lolClient = nil
 	}
 
-	// Save config
 	return config.Save(a.config)
 }
 
-// SetRegion updates the region setting
+// SetRegion updates the region and reinitializes the client.
 func (a *App) SetRegion(region string) error {
 	a.config.Region = region
 
-	// Reinitialize client with new region
 	if a.config.RiotAPIKey != "" {
 		client, err := lol.NewClient(a.config.RiotAPIKey, region)
 		if err != nil {
@@ -82,16 +87,10 @@ func (a *App) SetRegion(region string) error {
 		a.lolClient = client
 	}
 
-	// Save config
 	return config.Save(a.config)
 }
 
-// IsConfigured returns true if the app has a valid API key
+// IsConfigured returns true if the API key is set.
 func (a *App) IsConfigured() bool {
 	return a.config != nil && a.config.RiotAPIKey != ""
-}
-
-// Greet returns a greeting for the given name
-func (a *App) Greet(name string) string {
-	return fmt.Sprintf("Hello %s, It's show time!", name)
 }
