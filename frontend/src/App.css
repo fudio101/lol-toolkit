@@ -8,6 +8,7 @@
     --bg-secondary: #f0f2f5;
     --bg-tertiary: #e4e6eb;
     --bg-sidebar: #ffffff;
+    --bg-card: #ffffff;
     --bg-sidebar-hover: #f0f2f5;
     --bg-sidebar-active: #e7f3ff;
     
@@ -46,6 +47,7 @@
     --bg-secondary: #18191a;
     --bg-tertiary: #3a3b3c;
     --bg-sidebar: #242526;
+    --bg-card: #2d2e2f;
     --bg-sidebar-hover: #3a3b3c;
     --bg-sidebar-active: #263951;
     
@@ -296,6 +298,216 @@ body {
     flex-direction: column;
     gap: 24px;
 }
+
+/* Profile Tab Styles */
+.profile-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 48px;
+    color: var(--text-muted);
+}
+
+.profile-two-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+}
+
+@media (max-width: 800px) {
+    .profile-two-col {
+        grid-template-columns: 1fr;
+    }
+}
+
+.profile-column {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.profile-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-lg);
+    padding: 20px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.profile-card-full {
+    flex: 1;
+}
+
+.profile-card h3 {
+    margin: 0 0 16px 0;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+/* Level Display */
+.level-display {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.level-number {
+    font-size: 48px;
+    font-weight: 700;
+    color: var(--accent-primary);
+    font-family: 'Cinzel', serif;
+    line-height: 1;
+    min-width: 80px;
+}
+
+.level-details {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.level-xp-bar {
+    height: 10px;
+    background: var(--bg-primary);
+    border-radius: 5px;
+    overflow: hidden;
+}
+
+.level-xp-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent-primary), var(--accent-hover));
+    border-radius: 5px;
+    transition: width 0.3s ease;
+}
+
+.level-xp-text {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
+/* Reroll Display */
+.reroll-display {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.reroll-rolls {
+    display: flex;
+    align-items: baseline;
+    gap: 4px;
+    min-width: 80px;
+}
+
+.reroll-current {
+    font-size: 48px;
+    font-weight: 700;
+    color: var(--accent-primary);
+    font-family: 'Cinzel', serif;
+    line-height: 1;
+}
+
+.reroll-max {
+    font-size: 20px;
+    color: var(--text-muted);
+}
+
+.reroll-details {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+/* Account List */
+.account-list {
+    display: flex;
+    flex-direction: column;
+}
+
+.account-row-copy,
+.account-row-simple {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border-light);
+}
+
+.account-row-copy:last-child,
+.account-row-simple:last-child {
+    border-bottom: none;
+}
+
+.account-label {
+    font-size: 13px;
+    color: var(--text-muted);
+    flex-shrink: 0;
+}
+
+.account-value-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.account-value {
+    font-size: 13px;
+    color: var(--text-primary);
+    font-weight: 500;
+}
+
+.account-value.mono {
+    font-family: 'Fira Code', monospace;
+    font-size: 11px;
+    color: var(--text-secondary);
+}
+
+.copy-btn {
+    background: transparent;
+    border: 1px solid var(--border-light);
+    border-radius: 4px;
+    padding: 3px 6px;
+    cursor: pointer;
+    font-size: 11px;
+    opacity: 0.5;
+    transition: all 0.15s ease;
+}
+
+.copy-btn:hover {
+    opacity: 1;
+    background: var(--bg-hover);
+}
+
+.copy-btn.copied {
+    background: var(--success);
+    border-color: var(--success);
+    color: white;
+    opacity: 1;
+}
+
+.status-badge {
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 500;
+}
+
+.status-yes {
+    background: rgba(34, 197, 94, 0.15);
+    color: var(--success);
+}
+
+.status-no {
+    background: var(--bg-primary);
+    color: var(--text-muted);
+}
+
 
 /* ============================================
    Cards
