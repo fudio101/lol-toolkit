@@ -2,12 +2,24 @@
   "$schema": "https://wails.io/schemas/config.v2.json",
   "name": "lol-toolkit",
   "outputfilename": "lol-toolkit",
+  "frontend:dir": "frontend",
   "frontend:install": "npm install",
   "frontend:build": "npm run build",
   "frontend:dev:watcher": "npm run dev",
   "frontend:dev:serverUrl": "auto",
+  "wailsjsdir": "./frontend",
+  "build:dir": "build",
+  "reloaddirs": "internal,configs",
+  "debounceMS": 100,
   "author": {
     "name": "fudio101",
     "email": "thenguyen1024@gmail.com"
+  },
+  "info": {
+    "companyName": "fudio101",
+    "productName": "LoL Toolkit",
+    "productVersion": "1.0.0",
+    "copyright": "© 2025 fudio101",
+    "comments": "A League of Legends toolkit using Riot API"
   }
 }

@@ -1,19 +1,83 @@
-# README
+# LoL Toolkit
 
-## About
+A League of Legends toolkit desktop application built with Go + React.
 
-This is the official Wails React-TS template.
+## Features
 
-You can configure the project by editing `wails.json`. More information about the project settings can be found
-here: https://wails.io/docs/reference/project-config
+- 🔍 Summoner search by Riot ID
+- 📊 Ranked stats viewer
+- 🏆 Champion mastery viewer
+- 🎮 League leaderboards
 
-## Live Development
+## Prerequisites
 
-To run in live development mode, run `wails dev` in the project directory. This will run a Vite development
-server that will provide very fast hot reload of your frontend changes. If you want to develop in a browser
-and have access to your Go methods, there is also a dev server that runs on http://localhost:34115. Connect
-to this in your browser, and you can call your Go code from devtools.
+- [Go 1.23+](https://golang.org/dl/)
+- [Node.js 18+](https://nodejs.org/)
+- [Wails CLI](https://wails.io/docs/gettingstarted/installation)
+
+## Setup
+
+### 1. Create Embedded Config (Required)
+
+Create `internal/config/embedded.json`:
+
+```json
+{
+  "riot_api_key": "",
+  "region": "vn2"
+}
+```
+
+### 2. (Optional) Add Your Riot API Key
+
+Get your API key from [Riot Developer Portal](https://developer.riotgames.com/).
+
+```json
+{
+  "riot_api_key": "RGAPI-your-key-here",
+  "region": "vn2"
+}
+```
+
+> ⚠️ This file is gitignored. Your API key will be embedded in the built executable.
+
+### Available Regions
+
+| Code | Region |
+|------|--------|
+| `vn2` | Vietnam |
+| `na1` | North America |
+| `euw1` | Europe West |
+| `kr` | Korea |
+| `jp1` | Japan |
+| `sea` | Southeast Asia |
+
+## Development
+
+```bash
+wails dev
+```
 
 ## Building
 
-To build a redistributable, production mode package, use `wails build`.
+```bash
+wails build
+```
+
+## Project Structure
+
+```
+lol-toolkit/
+├── main.go
+├── internal/
+│   ├── app/                     # App logic (exposed to frontend)
+│   ├── config/
+│   │   └── embedded.json        # ← CREATE THIS FILE
+│   └── lol/                     # Riot API client
+├── frontend/                    # React + TypeScript
+└── wails.json
+```
+
+## License
+
+MIT
