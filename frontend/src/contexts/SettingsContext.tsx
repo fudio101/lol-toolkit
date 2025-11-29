@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useEffect, ReactNode } from 'react
 
 interface Settings {
     showDebug: boolean;
+    autoAcceptEnabled: boolean;
 }
 
 interface SettingsContextType {
@@ -15,6 +16,7 @@ const STORAGE_KEY = 'lol-toolkit-settings';
 
 const DEFAULT_SETTINGS: Settings = {
     showDebug: false,
+    autoAcceptEnabled: false,
 };
 
 function loadSettings(): Settings {

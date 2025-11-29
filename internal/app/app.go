@@ -3,7 +3,10 @@ package app
 import (
 	"context"
 
+	"github.com/wailsapp/wails/v2/pkg/runtime"
+
 	"lol-toolkit/internal/config"
+	"lol-toolkit/internal/lcu"
 	"lol-toolkit/internal/lol"
 )
 
@@ -22,6 +25,17 @@ func New() *App {
 // Startup initializes the app when Wails starts.
 func (a *App) Startup(ctx context.Context) {
 	a.ctx = ctx
+
+	// Wire backend LCU API logging to frontend via Wails events.
+	lcu.SetAPILogger(func(entry lcu.APILogEntry) {
+		runtime.EventsEmit(a.ctx, "api-call", entry)
+	})
+
+	// Wire backend Riot (golio) API logging to frontend as well.
+	lol.SetAPILogger(func(entry lol.APILogEntry) {
+		runtime.EventsEmit(a.ctx, "api-call", entry)
+	})
+
 	a.loadConfig()
 	a.initLolClient()
 }

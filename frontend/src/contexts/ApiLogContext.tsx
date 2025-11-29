@@ -1,4 +1,5 @@
-import { createContext, useContext, useState, useCallback, ReactNode } from 'react';
+import { createContext, useContext, useState, useCallback, ReactNode, useEffect } from 'react';
+import { EventsOn } from '../../wailsjs/runtime/runtime';
 
 export interface ApiLogEntry {
     id: string;
@@ -8,15 +9,13 @@ export interface ApiLogEntry {
     endpoint: string;
     status: 'pending' | 'success' | 'error';
     duration?: number;
+    headers?: Record<string, string>;
     response?: any;
     error?: string;
 }
 
 interface ApiLogContextType {
     logs: ApiLogEntry[];
-    addLog: (entry: Omit<ApiLogEntry, 'id' | 'timestamp'>) => string;
-    updateLog: (id: string, updates: Partial<ApiLogEntry>) => void;
-    clearLogs: () => void;
 }
 
 const ApiLogContext = createContext<ApiLogContextType | null>(null);
@@ -26,30 +25,45 @@ const MAX_LOGS = 50;
 export function ApiLogProvider({ children }: { children: ReactNode }) {
     const [logs, setLogs] = useState<ApiLogEntry[]>([]);
 
-    const addLog = useCallback((entry: Omit<ApiLogEntry, 'id' | 'timestamp'>): string => {
-        const id = `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
-        const newEntry: ApiLogEntry = {
-            ...entry,
-            id,
-            timestamp: new Date(),
+    // Subscribe to backend API call events
+    useEffect(() => {
+        const off = EventsOn('api-call', (data: any) => {
+            if (!data) return;
+
+            const id = `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+            const type = (data.type === 'lcu' || data.type === 'riot') ? data.type : 'lcu';
+            const statusCode: number | undefined = typeof data.statusCode === 'number' ? data.statusCode : undefined;
+            const durationMs: number | undefined =
+                typeof data.duration === 'number' ? data.duration : (typeof data.duration === 'string' ? parseInt(data.duration, 10) : undefined);
+
+            const status: ApiLogEntry['status'] =
+                data.error ? 'error' : (statusCode && statusCode >= 200 && statusCode < 300 ? 'success' : 'pending');
+
+            const newEntry: ApiLogEntry = {
+                id,
+                timestamp: new Date(),
+                type,
+                method: data.method || 'GET',
+                endpoint: data.endpoint || '',
+                status,
+                duration: durationMs,
+                headers: data.headers || {},
+                response: data.response,
+                error: data.error,
+            };
+
+            setLogs(prev => [newEntry, ...prev].slice(0, MAX_LOGS));
+        });
+
+        return () => {
+            if (typeof off === 'function') {
+                off();
+            }
         };
-
-        setLogs(prev => [newEntry, ...prev].slice(0, MAX_LOGS));
-        return id;
-    }, []);
-
-    const updateLog = useCallback((id: string, updates: Partial<ApiLogEntry>) => {
-        setLogs(prev => prev.map(log => 
-            log.id === id ? { ...log, ...updates } : log
-        ));
-    }, []);
-
-    const clearLogs = useCallback(() => {
-        setLogs([]);
     }, []);
 
     return (
-        <ApiLogContext.Provider value={{ logs, addLog, updateLog, clearLogs }}>
+        <ApiLogContext.Provider value={{ logs }}>
             {children}
         </ApiLogContext.Provider>
     );

@@ -11,7 +11,7 @@ export function DebugTab({ summoner }: DebugTabProps) {
     const { config } = useConfig();
     const { status, isPolling } = useLCU();
     const { theme, resolvedTheme } = useTheme();
-    const { logs, clearLogs } = useApiLog();
+    const { logs } = useApiLog();
     const [expandedLog, setExpandedLog] = useState<string | null>(null);
     const [copiedId, setCopiedId] = useState<string | null>(null);
     const windowSize = useWindowSize();
@@ -50,58 +50,17 @@ export function DebugTab({ summoner }: DebugTabProps) {
         }
     };
 
-    const getEndpointPath = (endpoint: string) => {
-        const paths: Record<string, string> = {
-            'GetLCUStatus': '/lol-gameflow/v1/gameflow-phase',
-            'GetCurrentSummoner': '/lol-summoner/v1/current-summoner',
-        };
-        return paths[endpoint] || `/${endpoint}`;
-    };
-
-    const getBase64Auth = () => {
-        if (status?.authToken) {
-            return btoa(`riot:${status.authToken}`);
-        }
-        return 'BASE64_AUTH_TOKEN';
-    };
-
-    const generateCurl = (log: typeof logs[0]) => {
-        const port = status?.port || 'PORT';
-        const auth = getBase64Auth();
-        const path = getEndpointPath(log.endpoint);
-        
-        if (log.type === 'lcu') {
-            return `curl -X ${log.method} "https://127.0.0.1:${port}${path}" -H "Authorization: Basic ${auth}" -H "Accept: application/json" --insecure`;
-        }
-        const apiKey = config?.riot_api_key || 'YOUR_API_KEY';
-        const region = config?.region || 'na1';
-        return `curl -X ${log.method} "https://${region}.api.riotgames.com${path}" -H "X-Riot-Token: ${apiKey}" -H "Accept: application/json"`;
-    };
-
-    const generatePowerShell = (log: typeof logs[0]) => {
-        const port = status?.port || 'PORT';
-        const auth = getBase64Auth();
-        const path = getEndpointPath(log.endpoint);
-        
-        if (log.type === 'lcu') {
-            return `Invoke-RestMethod -Uri "https://127.0.0.1:${port}${path}" -Method ${log.method} -Headers @{"Authorization"="Basic ${auth}";"Accept"="application/json"} -SkipCertificateCheck`;
-        }
-        const apiKey = config?.riot_api_key || 'YOUR_API_KEY';
-        const region = config?.region || 'na1';
-        return `Invoke-RestMethod -Uri "https://${region}.api.riotgames.com${path}" -Method ${log.method} -Headers @{"X-Riot-Token"="${apiKey}";"Accept"="application/json"}`;
-    };
 
     return (
         <div className="tab-content">
             <div className="debug-card">
                 <div className="debug-card-header">
-                    <h3>📡 API Call Log</h3>
+                    <h3>🛰 API Calls</h3>
                     <div className="debug-actions">
                         <span className="log-count">{logs.length} calls</span>
-                        <button className="btn-small btn-danger" onClick={clearLogs}>Clear</button>
                     </div>
                 </div>
-                
+
                 <div className="api-log-list">
                     {logs.length === 0 ? (
                         <div className="api-log-empty">No API calls logged yet.</div>
@@ -122,50 +81,53 @@ export function DebugTab({ summoner }: DebugTabProps) {
                                     <span className="api-log-method">{log.method}</span>
                                     <span className="api-log-endpoint">{log.endpoint}</span>
                                     <span className="api-log-time">{formatTime(log.timestamp)}</span>
-                                    {log.duration && (
+                                    {log.duration !== undefined && (
                                         <span className="api-log-duration">{log.duration}ms</span>
                                     )}
                                     <span className="api-log-expand">{expandedLog === log.id ? '▼' : '▶'}</span>
                                 </div>
                                 {expandedLog === log.id && (
                                     <div className="api-log-details">
-                                        <div className="api-log-copy-buttons">
-                                            <button 
-                                                className={`btn-copy ${copiedId === `${log.id}-curl` ? 'copied' : ''}`}
-                                                onClick={(e) => { e.stopPropagation(); copyToClipboard(generateCurl(log), `${log.id}-curl`); }}
-                                            >
-                                                {copiedId === `${log.id}-curl` ? '✓ Copied' : '📋 cURL'}
-                                            </button>
-                                            <button 
-                                                className={`btn-copy ${copiedId === `${log.id}-ps` ? 'copied' : ''}`}
-                                                onClick={(e) => { e.stopPropagation(); copyToClipboard(generatePowerShell(log), `${log.id}-ps`); }}
-                                            >
-                                                {copiedId === `${log.id}-ps` ? '✓ Copied' : '📋 PowerShell'}
-                                            </button>
-                                        </div>
-                                        {log.error ? (
-                                            <div className="api-log-code-block">
-                                                <button 
-                                                    className={`btn-copy-icon ${copiedId === `${log.id}-error` ? 'copied' : ''}`}
-                                                    onClick={(e) => { e.stopPropagation(); copyToClipboard(log.error!, `${log.id}-error`); }}
-                                                    title="Copy error"
-                                                >
-                                                    {copiedId === `${log.id}-error` ? '✓' : '📋'}
-                                                </button>
-                                                <pre className="api-log-error">{log.error}</pre>
+                                        {log.error && (
+                                            <div className="api-log-section">
+                                                <div className="api-log-section-title">Error</div>
+                                                <div className="api-log-code-block">
+                                                    <button 
+                                                        className={`btn-copy-icon ${copiedId === `${log.id}-error` ? 'copied' : ''}`}
+                                                        onClick={(e) => { e.stopPropagation(); copyToClipboard(log.error!, `${log.id}-error`); }}
+                                                        title="Copy error"
+                                                    >
+                                                        {copiedId === `${log.id}-error` ? '✓' : '📋'}
+                                                    </button>
+                                                    <pre className="api-log-error">{log.error}</pre>
+                                                </div>
                                             </div>
-                                        ) : log.response ? (
-                                            <div className="api-log-code-block">
-                                                <button 
-                                                    className={`btn-copy-icon ${copiedId === `${log.id}-response` ? 'copied' : ''}`}
-                                                    onClick={(e) => { e.stopPropagation(); copyToClipboard(JSON.stringify(log.response, null, 2), `${log.id}-response`); }}
-                                                    title="Copy response"
-                                                >
-                                                    {copiedId === `${log.id}-response` ? '✓' : '📋'}
-                                                </button>
-                                                <pre className="api-log-response">{JSON.stringify(log.response, null, 2)}</pre>
+                                        )}
+                                        {!log.error && log.response && (
+                                            <div className="api-log-section">
+                                                <div className="api-log-section-title">Response</div>
+                                                <div className="api-log-code-block">
+                                                    <button 
+                                                        className={`btn-copy-icon ${copiedId === `${log.id}-response` ? 'copied' : ''}`}
+                                                        onClick={(e) => { 
+                                                            e.stopPropagation(); 
+                                                            const responseText = typeof log.response === 'string'
+                                                                ? log.response
+                                                                : JSON.stringify(log.response, null, 2);
+                                                            copyToClipboard(responseText, `${log.id}-response`); 
+                                                        }}
+                                                        title="Copy response"
+                                                    >
+                                                        {copiedId === `${log.id}-response` ? '✓' : '📋'}
+                                                    </button>
+                                                    <pre className="api-log-response">
+                                                        {typeof log.response === 'string'
+                                                            ? log.response
+                                                            : JSON.stringify(log.response, null, 2)}
+                                                    </pre>
+                                                </div>
                                             </div>
-                                        ) : null}
+                                        )}
                                     </div>
                                 )}
                             </div>

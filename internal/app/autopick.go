@@ -21,13 +21,15 @@ type AutoPickConfig struct {
 func (a *App) StartAutoPick(config AutoPickConfig) error {
 	// Note: Auto-pick doesn't require Riot API key, only LCU connection
 
-	client, err := lcu.NewClient()
-	if err != nil {
-		return err
-	}
-
+	// Stop existing service if running
 	if autoPickService != nil {
 		autoPickService.Stop()
+		autoPickService = nil
+	}
+
+	client, err := lcu.NewClient()
+	if err != nil {
+		return fmt.Errorf("failed to create LCU client: %w", err)
 	}
 
 	autoPickService = lcu.NewAutoPickService(client)

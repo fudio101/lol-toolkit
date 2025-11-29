@@ -9,6 +9,9 @@ export function SettingsTab() {
 
     const handleAutoAcceptChange = async (enabled: boolean) => {
         try {
+            // Update settings first to reflect the change immediately
+            updateSettings({ autoAcceptEnabled: enabled });
+
             if (!enabled) {
                 await StopAutoPick();
                 return;
@@ -26,6 +29,8 @@ export function SettingsTab() {
             await StartAutoPick(config);
         } catch (err) {
             console.error('Failed to update auto-accept:', err);
+            // Revert on error
+            updateSettings({ autoAcceptEnabled: !enabled });
         }
     };
 
@@ -77,6 +82,7 @@ export function SettingsTab() {
                     <label className="toggle-switch">
                         <input
                             type="checkbox"
+                            checked={settings.autoAcceptEnabled}
                             disabled={!status?.connected}
                             onChange={(e) => handleAutoAcceptChange(e.target.checked)}
                         />

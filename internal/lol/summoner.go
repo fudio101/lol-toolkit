@@ -3,6 +3,7 @@ package lol
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/KnutZuidema/golio/riot/lol"
 )
@@ -35,16 +36,56 @@ func (c *Client) SearchByRiotID(riotID string) (*SummonerInfo, error) {
 	}
 
 	// Get account by Riot ID
+	start := time.Now()
 	account, err := c.golio.Riot.Account.GetByRiotID(gameName, tagLine)
+	duration := time.Since(start)
 	if err != nil {
+		logAPICall(APILogEntry{
+			Type:       "riot",
+			Method:     "GET",
+			Endpoint:   "account/by-riot-id",
+			Duration:   duration.Milliseconds(),
+			Headers:    c.getHeaders(),
+			Error:      err.Error(),
+			StatusCode: 500,
+		})
 		return nil, fmt.Errorf("account not found: %w", err)
 	}
+	logAPICall(APILogEntry{
+		Type:       "riot",
+		Method:     "GET",
+		Endpoint:   "account/by-riot-id",
+		Duration:   duration.Milliseconds(),
+		Headers:    c.getHeaders(),
+		StatusCode: 200,
+		Response:   c.marshalResponse(account),
+	})
 
 	// Get summoner by PUUID
+	start = time.Now()
 	summoner, err := c.golio.Riot.LoL.Summoner.GetByPUUID(account.Puuid)
+	duration = time.Since(start)
 	if err != nil {
+		logAPICall(APILogEntry{
+			Type:       "riot",
+			Method:     "GET",
+			Endpoint:   "summoner/by-puuid",
+			Duration:   duration.Milliseconds(),
+			Headers:    c.getHeaders(),
+			Error:      err.Error(),
+			StatusCode: 500,
+		})
 		return nil, fmt.Errorf("summoner not found: %w", err)
 	}
+	logAPICall(APILogEntry{
+		Type:       "riot",
+		Method:     "GET",
+		Endpoint:   "summoner/by-puuid",
+		Duration:   duration.Milliseconds(),
+		Headers:    c.getHeaders(),
+		StatusCode: 200,
+		Response:   c.marshalResponse(summoner),
+	})
 
 	return &SummonerInfo{
 		ID:            summoner.ID,
@@ -60,33 +101,112 @@ func (c *Client) SearchByRiotID(riotID string) (*SummonerInfo, error) {
 
 // GetSummonerByPUUID fetches summoner info by PUUID
 func (c *Client) GetSummonerByPUUID(puuid string) (*SummonerInfo, error) {
+	start := time.Now()
 	summoner, err := c.golio.Riot.LoL.Summoner.GetByPUUID(puuid)
+	duration := time.Since(start)
 	if err != nil {
+		logAPICall(APILogEntry{
+			Type:       "riot",
+			Method:     "GET",
+			Endpoint:   "summoner/by-puuid",
+			Duration:   duration.Milliseconds(),
+			Error:      err.Error(),
+			StatusCode: 500,
+		})
 		return nil, err
 	}
+	logAPICall(APILogEntry{
+		Type:       "riot",
+		Method:     "GET",
+		Endpoint:   "summoner/by-puuid",
+		Duration:   duration.Milliseconds(),
+		Headers:    c.getHeaders(),
+		StatusCode: 200,
+		Response:   c.marshalResponse(summoner),
+	})
 
 	// Also get account info for GameName and TagLine
+	start = time.Now()
 	account, err := c.golio.Riot.Account.GetByPUUID(puuid)
+	duration = time.Since(start)
 	if err != nil {
+		logAPICall(APILogEntry{
+			Type:       "riot",
+			Method:     "GET",
+			Endpoint:   "account/by-puuid",
+			Duration:   duration.Milliseconds(),
+			Headers:    c.getHeaders(),
+			Error:      err.Error(),
+			StatusCode: 500,
+		})
 		// Return summoner info without GameName/TagLine if account lookup fails
 		return toSummonerInfo(summoner, "", ""), nil
 	}
+	logAPICall(APILogEntry{
+		Type:       "riot",
+		Method:     "GET",
+		Endpoint:   "account/by-puuid",
+		Duration:   duration.Milliseconds(),
+		Headers:    c.getHeaders(),
+		StatusCode: 200,
+		Response:   c.marshalResponse(account),
+	})
 
 	return toSummonerInfo(summoner, account.GameName, account.TagLine), nil
 }
 
 // GetSummonerByID fetches summoner info by summoner ID
 func (c *Client) GetSummonerByID(summonerID string) (*SummonerInfo, error) {
+	start := time.Now()
 	summoner, err := c.golio.Riot.LoL.Summoner.GetByID(summonerID)
+	duration := time.Since(start)
 	if err != nil {
+		logAPICall(APILogEntry{
+			Type:       "riot",
+			Method:     "GET",
+			Endpoint:   "summoner/by-id",
+			Duration:   duration.Milliseconds(),
+			Headers:    c.getHeaders(),
+			Error:      err.Error(),
+			StatusCode: 500,
+		})
 		return nil, err
 	}
+	logAPICall(APILogEntry{
+		Type:       "riot",
+		Method:     "GET",
+		Endpoint:   "summoner/by-id",
+		Duration:   duration.Milliseconds(),
+		Headers:    c.getHeaders(),
+		StatusCode: 200,
+		Response:   c.marshalResponse(summoner),
+	})
 
 	// Also get account info for GameName and TagLine
+	start = time.Now()
 	account, err := c.golio.Riot.Account.GetByPUUID(summoner.PUUID)
+	duration = time.Since(start)
 	if err != nil {
+		logAPICall(APILogEntry{
+			Type:       "riot",
+			Method:     "GET",
+			Endpoint:   "account/by-puuid",
+			Duration:   duration.Milliseconds(),
+			Headers:    c.getHeaders(),
+			Error:      err.Error(),
+			StatusCode: 500,
+		})
 		return toSummonerInfo(summoner, "", ""), nil
 	}
+	logAPICall(APILogEntry{
+		Type:       "riot",
+		Method:     "GET",
+		Endpoint:   "account/by-puuid",
+		Duration:   duration.Milliseconds(),
+		Headers:    c.getHeaders(),
+		StatusCode: 200,
+		Response:   c.marshalResponse(account),
+	})
 
 	return toSummonerInfo(summoner, account.GameName, account.TagLine), nil
 }

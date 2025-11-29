@@ -1,6 +1,8 @@
 package lol
 
 import (
+	"time"
+
 	"github.com/KnutZuidema/golio/riot/lol"
 )
 
@@ -23,10 +25,30 @@ type RankedInfo struct {
 
 // GetRankedStats fetches all ranked entries for a summoner
 func (c *Client) GetRankedStats(summonerID string) ([]*RankedInfo, error) {
+	start := time.Now()
 	entries, err := c.golio.Riot.LoL.League.ListBySummoner(summonerID)
+	duration := time.Since(start)
 	if err != nil {
+		logAPICall(APILogEntry{
+			Type:       "riot",
+			Method:     "GET",
+			Endpoint:   "league/by-summoner",
+			Duration:   duration.Milliseconds(),
+			Headers:    c.getHeaders(),
+			Error:      err.Error(),
+			StatusCode: 500,
+		})
 		return nil, err
 	}
+	logAPICall(APILogEntry{
+		Type:       "riot",
+		Method:     "GET",
+		Endpoint:   "league/by-summoner",
+		Duration:   duration.Milliseconds(),
+		Headers:    c.getHeaders(),
+		StatusCode: 200,
+		Response:   c.marshalResponse(entries),
+	})
 
 	result := make([]*RankedInfo, len(entries))
 	for i, e := range entries {
@@ -52,39 +74,99 @@ func (c *Client) GetRankedStats(summonerID string) ([]*RankedInfo, error) {
 
 // GetChallengers fetches the challenger league for a queue
 func (c *Client) GetChallengers(queueType string) (*LeagueListInfo, error) {
+	start := time.Now()
 	league, err := c.golio.Riot.LoL.League.GetChallenger(lol.QueueRankedSolo)
 	if queueType == QueueRankedFlex {
 		league, err = c.golio.Riot.LoL.League.GetChallenger(lol.QueueRankedFlex)
 	}
+	duration := time.Since(start)
 	if err != nil {
+		logAPICall(APILogEntry{
+			Type:       "riot",
+			Method:     "GET",
+			Endpoint:   "league/challenger",
+			Duration:   duration.Milliseconds(),
+			Headers:    c.getHeaders(),
+			Error:      err.Error(),
+			StatusCode: 500,
+		})
 		return nil, err
 	}
+	logAPICall(APILogEntry{
+		Type:       "riot",
+		Method:     "GET",
+		Endpoint:   "league/challenger",
+		Duration:   duration.Milliseconds(),
+		Headers:    c.getHeaders(),
+		StatusCode: 200,
+		Response:   c.marshalResponse(league),
+	})
 
 	return toLeagueListInfo(league), nil
 }
 
 // GetGrandmasters fetches the grandmaster league for a queue
 func (c *Client) GetGrandmasters(queueType string) (*LeagueListInfo, error) {
+	start := time.Now()
 	league, err := c.golio.Riot.LoL.League.GetGrandmaster(lol.QueueRankedSolo)
 	if queueType == QueueRankedFlex {
 		league, err = c.golio.Riot.LoL.League.GetGrandmaster(lol.QueueRankedFlex)
 	}
+	duration := time.Since(start)
 	if err != nil {
+		logAPICall(APILogEntry{
+			Type:       "riot",
+			Method:     "GET",
+			Endpoint:   "league/grandmaster",
+			Duration:   duration.Milliseconds(),
+			Headers:    c.getHeaders(),
+			Error:      err.Error(),
+			StatusCode: 500,
+		})
 		return nil, err
 	}
+	logAPICall(APILogEntry{
+		Type:       "riot",
+		Method:     "GET",
+		Endpoint:   "league/grandmaster",
+		Duration:   duration.Milliseconds(),
+		Headers:    c.getHeaders(),
+		StatusCode: 200,
+		Response:   c.marshalResponse(league),
+	})
 
 	return toLeagueListInfo(league), nil
 }
 
 // GetMasters fetches the master league for a queue
 func (c *Client) GetMasters(queueType string) (*LeagueListInfo, error) {
+	start := time.Now()
 	league, err := c.golio.Riot.LoL.League.GetMaster(lol.QueueRankedSolo)
 	if queueType == QueueRankedFlex {
 		league, err = c.golio.Riot.LoL.League.GetMaster(lol.QueueRankedFlex)
 	}
+	duration := time.Since(start)
 	if err != nil {
+		logAPICall(APILogEntry{
+			Type:       "riot",
+			Method:     "GET",
+			Endpoint:   "league/master",
+			Duration:   duration.Milliseconds(),
+			Headers:    c.getHeaders(),
+			Error:      err.Error(),
+			StatusCode: 500,
+		})
 		return nil, err
 	}
+	logAPICall(APILogEntry{
+		Type:       "riot",
+		Method:     "GET",
+		Endpoint:   "league/master",
+		Duration:   duration.Milliseconds(),
+		Headers:    c.getHeaders(),
+		StatusCode: 200,
+		Response:   c.marshalResponse(league),
+	})
 
 	return toLeagueListInfo(league), nil
 }

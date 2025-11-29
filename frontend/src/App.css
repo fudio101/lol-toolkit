@@ -1237,3 +1237,51 @@ body {
     color: white;
     opacity: 1;
 }
+
+.api-log-section {
+    margin-bottom: 16px;
+}
+
+.api-log-section:last-child {
+    margin-bottom: 0;
+}
+
+.api-log-section-title {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.api-log-headers {
+    background: var(--bg-primary);
+    padding: 12px;
+    border-radius: var(--radius-sm);
+    font-family: 'Fira Code', monospace;
+    font-size: 0.75rem;
+    margin: 0;
+}
+
+.api-log-header-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 4px;
+    word-break: break-all;
+}
+
+.api-log-header-row:last-child {
+    margin-bottom: 0;
+}
+
+.api-log-header-key {
+    color: var(--accent-text);
+    font-weight: 600;
+    min-width: fit-content;
+}
+
+.api-log-header-value {
+    color: var(--text-secondary);
+    flex: 1;
+}

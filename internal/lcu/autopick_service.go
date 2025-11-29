@@ -57,10 +57,16 @@ func (s *AutoPickService) Stop() {
 		return
 	}
 	s.enabled = false
+	stopChan := s.stop
 	s.mu.Unlock()
 
-	close(s.stop)
+	close(stopChan)
 	s.wg.Wait()
+
+	// Recreate stop channel for potential restart
+	s.mu.Lock()
+	s.stop = make(chan struct{})
+	s.mu.Unlock()
 }
 
 // SetAutoAccept enables/disables auto-accept.

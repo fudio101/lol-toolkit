@@ -1,6 +1,8 @@
 package lcu
 
 import (
+	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"io"
 	"os/exec"
@@ -85,12 +87,31 @@ func NewClient() (*Client, error) {
 
 // GetCurrentSummoner returns the currently logged in summoner.
 func (c *Client) GetCurrentSummoner() (*CurrentSummoner, error) {
+	start := time.Now()
+
+	// Get connection info for headers
+	_, token, _ := getConnectionInfo()
+	headers := make(map[string]string)
+	if token != "" {
+		headers["Authorization"] = fmt.Sprintf("Basic %s", base64Encode(fmt.Sprintf("riot:%s", token)))
+	}
+	headers["Accept"] = "application/json"
+
 	// Use lcu-gopher's built-in method
 	lcuSummoner, err := c.client.GetCurrentSummoner()
+	duration := time.Since(start)
 	if err != nil {
+		logAPICall(APILogEntry{
+			Type:       "lcu",
+			Method:     "GET",
+			Endpoint:   "/lol-summoner/v1/current-summoner",
+			StatusCode: 500,
+			Duration:   duration.Milliseconds(),
+			Headers:    headers,
+			Error:      err.Error(),
+		})
 		return nil, err
 	}
-
 	// Convert to our exported type
 	summoner := &CurrentSummoner{
 		AccountID:                   lcuSummoner.AccountID,
@@ -114,6 +135,18 @@ func (c *Client) GetCurrentSummoner() (*CurrentSummoner, error) {
 		XpSinceLastLevel: lcuSummoner.XpSinceLastLevel,
 		XpUntilNextLevel: lcuSummoner.XpUntilNextLevel,
 	}
+
+	// Marshal response for logging
+	responseJSON, _ := json.MarshalIndent(summoner, "", "  ")
+	logAPICall(APILogEntry{
+		Type:       "lcu",
+		Method:     "GET",
+		Endpoint:   "/lol-summoner/v1/current-summoner",
+		StatusCode: 200,
+		Duration:   duration.Milliseconds(),
+		Headers:    headers,
+		Response:   string(responseJSON),
+	})
 
 	return summoner, nil
 }
@@ -204,22 +237,74 @@ func parseProcessArgs(output string) (string, string, error) {
 	return portMatch[1], tokenMatch[1], nil
 }
 
-// Request makes a raw HTTP request to the LCU API.
+// base64Encode encodes a string to base64.
+func base64Encode(s string) string {
+	return base64.StdEncoding.EncodeToString([]byte(s))
+}
+
+// Request makes a raw HTTP request to the LCU API and logs it.
 func (c *Client) Request(method, endpoint string, body io.Reader) ([]byte, error) {
+	start := time.Now()
+
+	// Get connection info for headers
+	_, token, _ := getConnectionInfo()
+	headers := make(map[string]string)
+	if token != "" {
+		headers["Authorization"] = fmt.Sprintf("Basic %s", base64Encode(fmt.Sprintf("riot:%s", token)))
+	}
+	headers["Accept"] = "application/json"
+	if body != nil {
+		headers["Content-Type"] = "application/json"
+	}
+
 	resp, err := c.client.Request(method, endpoint, body)
+	duration := time.Since(start)
+
+	// Log network errors before returning
 	if err != nil {
+		logAPICall(APILogEntry{
+			Type:     "lcu",
+			Method:   method,
+			Endpoint: endpoint,
+			Duration: duration.Milliseconds(),
+			Headers:  headers,
+			Error:    err.Error(),
+		})
 		return nil, err
 	}
 	defer resp.Body.Close()
 
 	data, err := io.ReadAll(resp.Body)
 	if err != nil {
+		logAPICall(APILogEntry{
+			Type:       "lcu",
+			Method:     method,
+			Endpoint:   endpoint,
+			StatusCode: resp.StatusCode,
+			Duration:   duration.Milliseconds(),
+			Headers:    headers,
+			Error:      err.Error(),
+		})
 		return nil, err
 	}
 
+	entry := APILogEntry{
+		Type:       "lcu",
+		Method:     method,
+		Endpoint:   endpoint,
+		StatusCode: resp.StatusCode,
+		Duration:   duration.Milliseconds(),
+		Headers:    headers,
+		Response:   string(data),
+	}
+
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		// keep full body in Error for failures
+		entry.Error = string(data)
+		logAPICall(entry)
 		return nil, fmt.Errorf("lcu api error: %s - %s", resp.Status, string(data))
 	}
 
+	logAPICall(entry)
 	return data, nil
 }

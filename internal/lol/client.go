@@ -1,6 +1,7 @@
 package lol
 
 import (
+	"encoding/json"
 	"fmt"
 
 	"github.com/KnutZuidema/golio"
@@ -14,6 +15,7 @@ const DefaultRegion = "vn2"
 type Client struct {
 	golio  *golio.Client
 	region api.Region
+	apiKey string // stored for logging headers
 }
 
 // regionMap maps region codes to golio Region constants.
@@ -48,6 +50,7 @@ func NewClient(apiKey, region string) (*Client, error) {
 	return &Client{
 		golio:  client,
 		region: r,
+		apiKey: apiKey,
 	}, nil
 }
 
@@ -67,4 +70,26 @@ func (c *Client) GetGolio() *golio.Client {
 // GetRegion returns the current region.
 func (c *Client) GetRegion() api.Region {
 	return c.region
+}
+
+// getHeaders returns the standard headers for Riot API requests.
+func (c *Client) getHeaders() map[string]string {
+	headers := make(map[string]string)
+	if c.apiKey != "" {
+		headers["X-Riot-Token"] = c.apiKey
+	}
+	headers["Accept"] = "application/json"
+	return headers
+}
+
+// marshalResponse converts a response object to JSON string for logging.
+func (c *Client) marshalResponse(data interface{}) string {
+	if data == nil {
+		return ""
+	}
+	jsonData, err := json.MarshalIndent(data, "", "  ")
+	if err != nil {
+		return fmt.Sprintf("(failed to marshal: %v)", err)
+	}
+	return string(jsonData)
 }
