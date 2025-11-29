@@ -1,6 +1,9 @@
 package lol
 
-import "time"
+import (
+	"net/http"
+	"time"
+)
 
 // ChampionMasteryInfo represents champion mastery data for the frontend
 type ChampionMasteryInfo struct {
@@ -21,26 +24,10 @@ func (c *Client) GetChampionMastery(summonerID string, championID string) (*Cham
 	mastery, err := c.golio.Riot.LoL.ChampionMastery.Get(summonerID, championID)
 	duration := time.Since(start)
 	if err != nil {
-		logAPICall(APILogEntry{
-			Type:       "riot",
-			Method:     "GET",
-			Endpoint:   "champion-mastery/get",
-			Duration:   duration.Milliseconds(),
-			Headers:    c.getHeaders(),
-			Error:      err.Error(),
-			StatusCode: 500,
-		})
+		LogError("GET", "champion-mastery/get", duration, c.getHeaders(), err)
 		return nil, err
 	}
-	logAPICall(APILogEntry{
-		Type:       "riot",
-		Method:     "GET",
-		Endpoint:   "champion-mastery/get",
-		Duration:   duration.Milliseconds(),
-		Headers:    c.getHeaders(),
-		StatusCode: 200,
-		Response:   c.marshalResponse(mastery),
-	})
+	LogSuccess("GET", "champion-mastery/get", http.StatusOK, duration, c.getHeaders(), c.marshalResponse(mastery))
 
 	return &ChampionMasteryInfo{
 		ChampionID:                   mastery.ChampionID,
@@ -61,26 +48,10 @@ func (c *Client) GetAllChampionMasteries(summonerID string) ([]*ChampionMasteryI
 	masteries, err := c.golio.Riot.LoL.ChampionMastery.List(summonerID)
 	duration := time.Since(start)
 	if err != nil {
-		logAPICall(APILogEntry{
-			Type:       "riot",
-			Method:     "GET",
-			Endpoint:   "champion-mastery/list",
-			Duration:   duration.Milliseconds(),
-			Headers:    c.getHeaders(),
-			Error:      err.Error(),
-			StatusCode: 500,
-		})
+		LogError("GET", "champion-mastery/list", duration, c.getHeaders(), err)
 		return nil, err
 	}
-	logAPICall(APILogEntry{
-		Type:       "riot",
-		Method:     "GET",
-		Endpoint:   "champion-mastery/list",
-		Duration:   duration.Milliseconds(),
-		Headers:    c.getHeaders(),
-		StatusCode: 200,
-		Response:   c.marshalResponse(masteries),
-	})
+	LogSuccess("GET", "champion-mastery/list", http.StatusOK, duration, c.getHeaders(), c.marshalResponse(masteries))
 
 	result := make([]*ChampionMasteryInfo, len(masteries))
 	for i, m := range masteries {
@@ -106,25 +77,9 @@ func (c *Client) GetTotalMasteryScore(summonerID string) (int, error) {
 	total, err := c.golio.Riot.LoL.ChampionMastery.GetTotal(summonerID)
 	duration := time.Since(start)
 	if err != nil {
-		logAPICall(APILogEntry{
-			Type:       "riot",
-			Method:     "GET",
-			Endpoint:   "champion-mastery/total",
-			Duration:   duration.Milliseconds(),
-			Headers:    c.getHeaders(),
-			Error:      err.Error(),
-			StatusCode: 500,
-		})
+		LogError("GET", "champion-mastery/total", duration, c.getHeaders(), err)
 		return 0, err
 	}
-	logAPICall(APILogEntry{
-		Type:       "riot",
-		Method:     "GET",
-		Endpoint:   "champion-mastery/total",
-		Duration:   duration.Milliseconds(),
-		Headers:    c.getHeaders(),
-		StatusCode: 200,
-		Response:   c.marshalResponse(total),
-	})
+	LogSuccess("GET", "champion-mastery/total", http.StatusOK, duration, c.getHeaders(), c.marshalResponse(total))
 	return total, nil
 }

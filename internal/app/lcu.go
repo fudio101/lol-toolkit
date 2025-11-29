@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"time"
 
 	"github.com/wailsapp/wails/v2/pkg/runtime"
@@ -40,7 +41,7 @@ func (a *App) GetLCUStatus() *LCUStatus {
 			"type":       "lcu",
 			"method":     "GET",
 			"endpoint":   "GetLCUStatus",
-			"statusCode": 500,
+			"statusCode": http.StatusInternalServerError,
 			"duration":   duration.Milliseconds(),
 			"headers":    headers,
 			"response":   string(statusJSON),
@@ -60,7 +61,7 @@ func (a *App) GetLCUStatus() *LCUStatus {
 		"type":       "lcu",
 		"method":     "GET",
 		"endpoint":   "GetLCUStatus",
-		"statusCode": 200,
+		"statusCode": http.StatusOK,
 		"duration":   duration.Milliseconds(),
 		"headers":    headers,
 		"response":   string(statusJSON),
@@ -89,7 +90,7 @@ func (a *App) GetCurrentSummoner() (*lcu.CurrentSummoner, error) {
 			"type":       "lcu",
 			"method":     "GET",
 			"endpoint":   "/lol-summoner/v1/current-summoner",
-			"statusCode": 500,
+			"statusCode": http.StatusInternalServerError,
 			"duration":   time.Since(start).Milliseconds(),
 			"headers":    headers,
 			"error":      err.Error(),

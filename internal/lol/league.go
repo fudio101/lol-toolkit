@@ -1,6 +1,7 @@
 package lol
 
 import (
+	"net/http"
 	"time"
 
 	"github.com/KnutZuidema/golio/riot/lol"
@@ -29,26 +30,10 @@ func (c *Client) GetRankedStats(summonerID string) ([]*RankedInfo, error) {
 	entries, err := c.golio.Riot.LoL.League.ListBySummoner(summonerID)
 	duration := time.Since(start)
 	if err != nil {
-		logAPICall(APILogEntry{
-			Type:       "riot",
-			Method:     "GET",
-			Endpoint:   "league/by-summoner",
-			Duration:   duration.Milliseconds(),
-			Headers:    c.getHeaders(),
-			Error:      err.Error(),
-			StatusCode: 500,
-		})
+		LogError("GET", "league/by-summoner", duration, c.getHeaders(), err)
 		return nil, err
 	}
-	logAPICall(APILogEntry{
-		Type:       "riot",
-		Method:     "GET",
-		Endpoint:   "league/by-summoner",
-		Duration:   duration.Milliseconds(),
-		Headers:    c.getHeaders(),
-		StatusCode: 200,
-		Response:   c.marshalResponse(entries),
-	})
+	LogSuccess("GET", "league/by-summoner", http.StatusOK, duration, c.getHeaders(), c.marshalResponse(entries))
 
 	result := make([]*RankedInfo, len(entries))
 	for i, e := range entries {
@@ -81,26 +66,10 @@ func (c *Client) GetChallengers(queueType string) (*LeagueListInfo, error) {
 	}
 	duration := time.Since(start)
 	if err != nil {
-		logAPICall(APILogEntry{
-			Type:       "riot",
-			Method:     "GET",
-			Endpoint:   "league/challenger",
-			Duration:   duration.Milliseconds(),
-			Headers:    c.getHeaders(),
-			Error:      err.Error(),
-			StatusCode: 500,
-		})
+		LogError("GET", "league/challenger", duration, c.getHeaders(), err)
 		return nil, err
 	}
-	logAPICall(APILogEntry{
-		Type:       "riot",
-		Method:     "GET",
-		Endpoint:   "league/challenger",
-		Duration:   duration.Milliseconds(),
-		Headers:    c.getHeaders(),
-		StatusCode: 200,
-		Response:   c.marshalResponse(league),
-	})
+	LogSuccess("GET", "league/challenger", http.StatusOK, duration, c.getHeaders(), c.marshalResponse(league))
 
 	return toLeagueListInfo(league), nil
 }
@@ -114,26 +83,10 @@ func (c *Client) GetGrandmasters(queueType string) (*LeagueListInfo, error) {
 	}
 	duration := time.Since(start)
 	if err != nil {
-		logAPICall(APILogEntry{
-			Type:       "riot",
-			Method:     "GET",
-			Endpoint:   "league/grandmaster",
-			Duration:   duration.Milliseconds(),
-			Headers:    c.getHeaders(),
-			Error:      err.Error(),
-			StatusCode: 500,
-		})
+		LogError("GET", "league/grandmaster", duration, c.getHeaders(), err)
 		return nil, err
 	}
-	logAPICall(APILogEntry{
-		Type:       "riot",
-		Method:     "GET",
-		Endpoint:   "league/grandmaster",
-		Duration:   duration.Milliseconds(),
-		Headers:    c.getHeaders(),
-		StatusCode: 200,
-		Response:   c.marshalResponse(league),
-	})
+	LogSuccess("GET", "league/grandmaster", http.StatusOK, duration, c.getHeaders(), c.marshalResponse(league))
 
 	return toLeagueListInfo(league), nil
 }
@@ -147,26 +100,10 @@ func (c *Client) GetMasters(queueType string) (*LeagueListInfo, error) {
 	}
 	duration := time.Since(start)
 	if err != nil {
-		logAPICall(APILogEntry{
-			Type:       "riot",
-			Method:     "GET",
-			Endpoint:   "league/master",
-			Duration:   duration.Milliseconds(),
-			Headers:    c.getHeaders(),
-			Error:      err.Error(),
-			StatusCode: 500,
-		})
+		LogError("GET", "league/master", duration, c.getHeaders(), err)
 		return nil, err
 	}
-	logAPICall(APILogEntry{
-		Type:       "riot",
-		Method:     "GET",
-		Endpoint:   "league/master",
-		Duration:   duration.Milliseconds(),
-		Headers:    c.getHeaders(),
-		StatusCode: 200,
-		Response:   c.marshalResponse(league),
-	})
+	LogSuccess("GET", "league/master", http.StatusOK, duration, c.getHeaders(), c.marshalResponse(league))
 
 	return toLeagueListInfo(league), nil
 }

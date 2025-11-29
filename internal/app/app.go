@@ -6,7 +6,7 @@ import (
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 
 	"lol-toolkit/internal/config"
-	"lol-toolkit/internal/lcu"
+	"lol-toolkit/internal/logger"
 	"lol-toolkit/internal/lol"
 )
 
@@ -26,13 +26,9 @@ func New() *App {
 func (a *App) Startup(ctx context.Context) {
 	a.ctx = ctx
 
-	// Wire backend LCU API logging to frontend via Wails events.
-	lcu.SetAPILogger(func(entry lcu.APILogEntry) {
-		runtime.EventsEmit(a.ctx, "api-call", entry)
-	})
-
-	// Wire backend Riot (golio) API logging to frontend as well.
-	lol.SetAPILogger(func(entry lol.APILogEntry) {
+	// Wire backend API logging (both LCU and Riot) to frontend via Wails events.
+	// Both lcu and lol packages use the shared logger, so we only need to set it once.
+	logger.SetAPILogger(func(entry logger.APILogEntry) {
 		runtime.EventsEmit(a.ctx, "api-call", entry)
 	})
 

@@ -2,9 +2,9 @@ package lcu
 
 import (
 	"encoding/base64"
-	"encoding/json"
 	"fmt"
 	"io"
+	"net/http"
 	"os/exec"
 	"regexp"
 	"sync"
@@ -87,8 +87,6 @@ func NewClient() (*Client, error) {
 
 // GetCurrentSummoner returns the currently logged in summoner.
 func (c *Client) GetCurrentSummoner() (*CurrentSummoner, error) {
-	start := time.Now()
-
 	// Get connection info for headers
 	_, token, _ := getConnectionInfo()
 	headers := make(map[string]string)
@@ -97,58 +95,37 @@ func (c *Client) GetCurrentSummoner() (*CurrentSummoner, error) {
 	}
 	headers["Accept"] = "application/json"
 
-	// Use lcu-gopher's built-in method
-	lcuSummoner, err := c.client.GetCurrentSummoner()
-	duration := time.Since(start)
-	if err != nil {
-		logAPICall(APILogEntry{
-			Type:       "lcu",
-			Method:     "GET",
-			Endpoint:   "/lol-summoner/v1/current-summoner",
-			StatusCode: 500,
-			Duration:   duration.Milliseconds(),
-			Headers:    headers,
-			Error:      err.Error(),
-		})
-		return nil, err
-	}
-	// Convert to our exported type
-	summoner := &CurrentSummoner{
-		AccountID:                   lcuSummoner.AccountID,
-		DisplayName:                 lcuSummoner.DisplayName,
-		GameName:                    lcuSummoner.GameName,
-		TagLine:                     lcuSummoner.TagLine,
-		InternalName:                lcuSummoner.InternalName,
-		NameChangeFlag:              lcuSummoner.NameChangeFlag,
-		PercentCompleteForNextLevel: lcuSummoner.PercentCompleteForNextLevel,
-		ProfileIconID:               lcuSummoner.ProfileIconID,
-		PUUID:                       lcuSummoner.Puuid,
-		RerollPoints: RerollPoints{
-			CurrentPoints:    lcuSummoner.RerollPoints.CurrentPoints,
-			MaxRolls:         lcuSummoner.RerollPoints.MaxRolls,
-			NumberOfRolls:    lcuSummoner.RerollPoints.NumberOfRolls,
-			PointsCostToRoll: lcuSummoner.RerollPoints.PointsCostToRoll,
-			PointsToReroll:   lcuSummoner.RerollPoints.PointsToReroll,
-		},
-		SummonerID:       lcuSummoner.SummonerID,
-		SummonerLevel:    lcuSummoner.SummonerLevel,
-		XpSinceLastLevel: lcuSummoner.XpSinceLastLevel,
-		XpUntilNextLevel: lcuSummoner.XpUntilNextLevel,
-	}
-
-	// Marshal response for logging
-	responseJSON, _ := json.MarshalIndent(summoner, "", "  ")
-	logAPICall(APILogEntry{
-		Type:       "lcu",
-		Method:     "GET",
-		Endpoint:   "/lol-summoner/v1/current-summoner",
-		StatusCode: 200,
-		Duration:   duration.Milliseconds(),
-		Headers:    headers,
-		Response:   string(responseJSON),
+	// Wrap the API call with automatic logging - type-safe with generics
+	return LoggedCall("GET", "/lol-summoner/v1/current-summoner", http.StatusOK, headers, func() (*CurrentSummoner, error) {
+		// Use lcu-gopher's built-in method
+		lcuSummoner, err := c.client.GetCurrentSummoner()
+		if err != nil {
+			return nil, err
+		}
+		// Convert to our exported type
+		return &CurrentSummoner{
+			AccountID:                   lcuSummoner.AccountID,
+			DisplayName:                 lcuSummoner.DisplayName,
+			GameName:                    lcuSummoner.GameName,
+			TagLine:                     lcuSummoner.TagLine,
+			InternalName:                lcuSummoner.InternalName,
+			NameChangeFlag:              lcuSummoner.NameChangeFlag,
+			PercentCompleteForNextLevel: lcuSummoner.PercentCompleteForNextLevel,
+			ProfileIconID:               lcuSummoner.ProfileIconID,
+			PUUID:                       lcuSummoner.Puuid,
+			RerollPoints: RerollPoints{
+				CurrentPoints:    lcuSummoner.RerollPoints.CurrentPoints,
+				MaxRolls:         lcuSummoner.RerollPoints.MaxRolls,
+				NumberOfRolls:    lcuSummoner.RerollPoints.NumberOfRolls,
+				PointsCostToRoll: lcuSummoner.RerollPoints.PointsCostToRoll,
+				PointsToReroll:   lcuSummoner.RerollPoints.PointsToReroll,
+			},
+			SummonerID:       lcuSummoner.SummonerID,
+			SummonerLevel:    lcuSummoner.SummonerLevel,
+			XpSinceLastLevel: lcuSummoner.XpSinceLastLevel,
+			XpUntilNextLevel: lcuSummoner.XpUntilNextLevel,
+		}, nil
 	})
-
-	return summoner, nil
 }
 
 // GetConnectionInfo returns the current LCU connection info, or nil if not connected.
@@ -262,49 +239,24 @@ func (c *Client) Request(method, endpoint string, body io.Reader) ([]byte, error
 
 	// Log network errors before returning
 	if err != nil {
-		logAPICall(APILogEntry{
-			Type:     "lcu",
-			Method:   method,
-			Endpoint: endpoint,
-			Duration: duration.Milliseconds(),
-			Headers:  headers,
-			Error:    err.Error(),
-		})
+		LogError(method, endpoint, duration, headers, err) // Will extract status code from error
 		return nil, err
 	}
 	defer resp.Body.Close()
 
 	data, err := io.ReadAll(resp.Body)
 	if err != nil {
-		logAPICall(APILogEntry{
-			Type:       "lcu",
-			Method:     method,
-			Endpoint:   endpoint,
-			StatusCode: resp.StatusCode,
-			Duration:   duration.Milliseconds(),
-			Headers:    headers,
-			Error:      err.Error(),
-		})
+		LogError(method, endpoint, duration, headers, err) // Will extract status code from error
 		return nil, err
 	}
 
-	entry := APILogEntry{
-		Type:       "lcu",
-		Method:     method,
-		Endpoint:   endpoint,
-		StatusCode: resp.StatusCode,
-		Duration:   duration.Milliseconds(),
-		Headers:    headers,
-		Response:   string(data),
+	responseBody := string(data)
+	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
+		// Log error with response body in error field
+		LogRequest(method, endpoint, resp.StatusCode, duration, headers, responseBody, fmt.Errorf("lcu api error: %s - %s", resp.Status, responseBody))
+		return nil, fmt.Errorf("lcu api error: %s - %s", resp.Status, responseBody)
 	}
 
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		// keep full body in Error for failures
-		entry.Error = string(data)
-		logAPICall(entry)
-		return nil, fmt.Errorf("lcu api error: %s - %s", resp.Status, string(data))
-	}
-
-	logAPICall(entry)
+	LogSuccess(method, endpoint, resp.StatusCode, duration, headers, responseBody)
 	return data, nil
 }
