@@ -1,5 +1,27 @@
 export namespace app {
 	
+	export class AutoPickConfig {
+	    enabled: boolean;
+	    autoAccept: boolean;
+	    autoPick: boolean;
+	    autoLock: boolean;
+	    championId: number;
+	    championName?: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new AutoPickConfig(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.enabled = source["enabled"];
+	        this.autoAccept = source["autoAccept"];
+	        this.autoPick = source["autoPick"];
+	        this.autoLock = source["autoLock"];
+	        this.championId = source["championId"];
+	        this.championName = source["championName"];
+	    }
+	}
 	export class LCUStatus {
 	    connected: boolean;
 	    port?: string;
@@ -42,6 +64,40 @@ export namespace config {
 
 export namespace lcu {
 	
+	export class Champion {
+	    id: number;
+	    owned: boolean;
+	    rented: boolean;
+	    freeToPlay: boolean;
+	    freeToPlayReward: boolean;
+	    championId: number;
+	    purchased: number;
+	    alias: string;
+	    name: string;
+	    active: boolean;
+	    botEnabled: boolean;
+	    botMmEnabled: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new Champion(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.owned = source["owned"];
+	        this.rented = source["rented"];
+	        this.freeToPlay = source["freeToPlay"];
+	        this.freeToPlayReward = source["freeToPlayReward"];
+	        this.championId = source["championId"];
+	        this.purchased = source["purchased"];
+	        this.alias = source["alias"];
+	        this.name = source["name"];
+	        this.active = source["active"];
+	        this.botEnabled = source["botEnabled"];
+	        this.botMmEnabled = source["botMmEnabled"];
+	    }
+	}
 	export class RerollPoints {
 	    currentPoints: number;
 	    maxRolls: number;

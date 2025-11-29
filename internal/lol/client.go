@@ -10,11 +10,10 @@ import (
 // Default region when not specified.
 const DefaultRegion = "vn2"
 
-// Client wraps the golio client with rate limiting.
+// Client wraps the golio client.
 type Client struct {
-	golio       *golio.Client
-	region      api.Region
-	rateLimiter *RateLimiter
+	golio  *golio.Client
+	region api.Region
 }
 
 // regionMap maps region codes to golio Region constants.
@@ -37,7 +36,7 @@ var regionMap = map[string]api.Region{
 	"vn2":  api.RegionVietnam,
 }
 
-// NewClient creates a new LoL API client with rate limiting.
+// NewClient creates a new LoL API client.
 func NewClient(apiKey, region string) (*Client, error) {
 	if apiKey == "" {
 		return nil, fmt.Errorf("api key is required")
@@ -47,9 +46,8 @@ func NewClient(apiKey, region string) (*Client, error) {
 	client := golio.NewClient(apiKey, golio.WithRegion(r))
 
 	return &Client{
-		golio:       client,
-		region:      r,
-		rateLimiter: NewRateLimiter(),
+		golio:  client,
+		region: r,
 	}, nil
 }
 
@@ -61,11 +59,6 @@ func parseRegion(region string) api.Region {
 	return api.RegionVietnam
 }
 
-// waitForRateLimit blocks until rate limit allows a request.
-func (c *Client) waitForRateLimit() {
-	c.rateLimiter.Wait()
-}
-
 // GetGolio returns the underlying golio client.
 func (c *Client) GetGolio() *golio.Client {
 	return c.golio
@@ -74,9 +67,4 @@ func (c *Client) GetGolio() *golio.Client {
 // GetRegion returns the current region.
 func (c *Client) GetRegion() api.Region {
 	return c.region
-}
-
-// GetRateLimitStatus returns current rate limit usage.
-func (c *Client) GetRateLimitStatus() (shortUsed, shortLimit, longUsed, longLimit int) {
-	return c.rateLimiter.GetStatus()
 }

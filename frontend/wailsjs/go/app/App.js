@@ -34,6 +34,10 @@ export function GetMasters(arg1) {
   return window['go']['app']['App']['GetMasters'](arg1);
 }
 
+export function GetOwnedChampions() {
+  return window['go']['app']['App']['GetOwnedChampions']();
+}
+
 export function GetRankedStats(arg1) {
   return window['go']['app']['App']['GetRankedStats'](arg1);
 }
@@ -64,4 +68,16 @@ export function SetAPIKey(arg1) {
 
 export function SetRegion(arg1) {
   return window['go']['app']['App']['SetRegion'](arg1);
+}
+
+export function StartAutoPick(arg1) {
+  return window['go']['app']['App']['StartAutoPick'](arg1);
+}
+
+export function StopAutoPick() {
+  return window['go']['app']['App']['StopAutoPick']();
+}
+
+export function UpdateAutoPickConfig(arg1) {
+  return window['go']['app']['App']['UpdateAutoPickConfig'](arg1);
 }

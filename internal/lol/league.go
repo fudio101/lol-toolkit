@@ -23,7 +23,6 @@ type RankedInfo struct {
 
 // GetRankedStats fetches all ranked entries for a summoner
 func (c *Client) GetRankedStats(summonerID string) ([]*RankedInfo, error) {
-	c.waitForRateLimit()
 	entries, err := c.golio.Riot.LoL.League.ListBySummoner(summonerID)
 	if err != nil {
 		return nil, err
@@ -53,10 +52,8 @@ func (c *Client) GetRankedStats(summonerID string) ([]*RankedInfo, error) {
 
 // GetChallengers fetches the challenger league for a queue
 func (c *Client) GetChallengers(queueType string) (*LeagueListInfo, error) {
-	c.waitForRateLimit()
 	league, err := c.golio.Riot.LoL.League.GetChallenger(lol.QueueRankedSolo)
 	if queueType == QueueRankedFlex {
-		c.waitForRateLimit()
 		league, err = c.golio.Riot.LoL.League.GetChallenger(lol.QueueRankedFlex)
 	}
 	if err != nil {
@@ -68,10 +65,8 @@ func (c *Client) GetChallengers(queueType string) (*LeagueListInfo, error) {
 
 // GetGrandmasters fetches the grandmaster league for a queue
 func (c *Client) GetGrandmasters(queueType string) (*LeagueListInfo, error) {
-	c.waitForRateLimit()
 	league, err := c.golio.Riot.LoL.League.GetGrandmaster(lol.QueueRankedSolo)
 	if queueType == QueueRankedFlex {
-		c.waitForRateLimit()
 		league, err = c.golio.Riot.LoL.League.GetGrandmaster(lol.QueueRankedFlex)
 	}
 	if err != nil {
@@ -83,10 +78,8 @@ func (c *Client) GetGrandmasters(queueType string) (*LeagueListInfo, error) {
 
 // GetMasters fetches the master league for a queue
 func (c *Client) GetMasters(queueType string) (*LeagueListInfo, error) {
-	c.waitForRateLimit()
 	league, err := c.golio.Riot.LoL.League.GetMaster(lol.QueueRankedSolo)
 	if queueType == QueueRankedFlex {
-		c.waitForRateLimit()
 		league, err = c.golio.Riot.LoL.League.GetMaster(lol.QueueRankedFlex)
 	}
 	if err != nil {

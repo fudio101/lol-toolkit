@@ -1,17 +1,15 @@
 package lcu
 
 import (
-	"crypto/tls"
-	"encoding/base64"
-	"encoding/json"
 	"fmt"
 	"io"
-	"net/http"
 	"os/exec"
 	"regexp"
 	"sync"
 	"syscall"
 	"time"
+
+	lcuclient "github.com/its-haze/lcu-gopher"
 )
 
 // Connection cache settings.
@@ -28,23 +26,12 @@ type connectionCache struct {
 	updated time.Time
 }
 
-// Client represents the League Client Update API client.
+// Client is a thin wrapper around the lcu-gopher client.
 type Client struct {
-	port      string
-	authToken string
-	http      *http.Client
+	client *lcuclient.Client
 }
 
-// RerollPoints represents ARAM reroll points.
-type RerollPoints struct {
-	CurrentPoints    int `json:"currentPoints"`
-	MaxRolls         int `json:"maxRolls"`
-	NumberOfRolls    int `json:"numberOfRolls"`
-	PointsCostToRoll int `json:"pointsCostToRoll"`
-	PointsToReroll   int `json:"pointsToReroll"`
-}
-
-// CurrentSummoner represents the currently logged in summoner.
+// CurrentSummoner represents the currently logged in summoner (DTO exposed to the frontend).
 type CurrentSummoner struct {
 	AccountID                   int64        `json:"accountId"`
 	DisplayName                 string       `json:"displayName"`
@@ -62,49 +49,13 @@ type CurrentSummoner struct {
 	XpUntilNextLevel            int          `json:"xpUntilNextLevel"`
 }
 
-// NewClient creates a new LCU client.
-func NewClient() (*Client, error) {
-	port, token, err := getConnectionInfo()
-	if err != nil {
-		return nil, fmt.Errorf("league client not running: %w", err)
-	}
-
-	return &Client{
-		port:      port,
-		authToken: token,
-		http:      newHTTPClient(),
-	}, nil
-}
-
-// newHTTPClient creates an HTTP client for LCU (skips TLS verification).
-func newHTTPClient() *http.Client {
-	return &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-		Timeout: 5 * time.Second,
-	}
-}
-
-// GetCurrentSummoner returns the currently logged in summoner.
-func (c *Client) GetCurrentSummoner() (*CurrentSummoner, error) {
-	data, err := c.request("GET", "/lol-summoner/v1/current-summoner")
-	if err != nil {
-		return nil, err
-	}
-
-	var summoner CurrentSummoner
-	if err := json.Unmarshal(data, &summoner); err != nil {
-		return nil, fmt.Errorf("failed to parse summoner: %w", err)
-	}
-
-	return &summoner, nil
-}
-
-// IsClientRunning checks if the League client is running.
-func IsClientRunning() bool {
-	_, _, err := getConnectionInfo()
-	return err == nil
+// RerollPoints represents ARAM reroll points.
+type RerollPoints struct {
+	CurrentPoints    int `json:"currentPoints"`
+	MaxRolls         int `json:"maxRolls"`
+	NumberOfRolls    int `json:"numberOfRolls"`
+	PointsCostToRoll int `json:"pointsCostToRoll"`
+	PointsToReroll   int `json:"pointsToReroll"`
 }
 
 // ConnectionInfo holds connection details for external use.
@@ -113,16 +64,77 @@ type ConnectionInfo struct {
 	AuthToken string `json:"authToken"`
 }
 
+// NewClient creates a new LCU client using lcu-gopher.
+func NewClient() (*Client, error) {
+	config := lcuclient.DefaultConfig()
+	config.AwaitConnection = false
+	config.Timeout = 5 * time.Second
+
+	client, err := lcuclient.NewClient(config)
+	if err != nil {
+		return nil, fmt.Errorf("league client not running: %w", err)
+	}
+
+	// Connect to the client
+	if err := client.Connect(); err != nil {
+		return nil, fmt.Errorf("failed to connect: %w", err)
+	}
+
+	return &Client{client: client}, nil
+}
+
+// GetCurrentSummoner returns the currently logged in summoner.
+func (c *Client) GetCurrentSummoner() (*CurrentSummoner, error) {
+	// Use lcu-gopher's built-in method
+	lcuSummoner, err := c.client.GetCurrentSummoner()
+	if err != nil {
+		return nil, err
+	}
+
+	// Convert to our exported type
+	summoner := &CurrentSummoner{
+		AccountID:                   lcuSummoner.AccountID,
+		DisplayName:                 lcuSummoner.DisplayName,
+		GameName:                    lcuSummoner.GameName,
+		TagLine:                     lcuSummoner.TagLine,
+		InternalName:                lcuSummoner.InternalName,
+		NameChangeFlag:              lcuSummoner.NameChangeFlag,
+		PercentCompleteForNextLevel: lcuSummoner.PercentCompleteForNextLevel,
+		ProfileIconID:               lcuSummoner.ProfileIconID,
+		PUUID:                       lcuSummoner.Puuid,
+		RerollPoints: RerollPoints{
+			CurrentPoints:    lcuSummoner.RerollPoints.CurrentPoints,
+			MaxRolls:         lcuSummoner.RerollPoints.MaxRolls,
+			NumberOfRolls:    lcuSummoner.RerollPoints.NumberOfRolls,
+			PointsCostToRoll: lcuSummoner.RerollPoints.PointsCostToRoll,
+			PointsToReroll:   lcuSummoner.RerollPoints.PointsToReroll,
+		},
+		SummonerID:       lcuSummoner.SummonerID,
+		SummonerLevel:    lcuSummoner.SummonerLevel,
+		XpSinceLastLevel: lcuSummoner.XpSinceLastLevel,
+		XpUntilNextLevel: lcuSummoner.XpUntilNextLevel,
+	}
+
+	return summoner, nil
+}
+
 // GetConnectionInfo returns the current LCU connection info, or nil if not connected.
 func GetConnectionInfo() *ConnectionInfo {
 	port, token, err := getConnectionInfo()
 	if err != nil {
 		return nil
 	}
+
 	return &ConnectionInfo{
 		Port:      port,
 		AuthToken: token,
 	}
+}
+
+// IsClientRunning checks if the League client is running.
+func IsClientRunning() bool {
+	_, _, err := getConnectionInfo()
+	return err == nil
 }
 
 // ClearCache clears the cached connection info.
@@ -158,39 +170,6 @@ func getConnectionInfo() (string, string, error) {
 	return port, token, nil
 }
 
-// request makes a request to the LCU API.
-func (c *Client) request(method, endpoint string) ([]byte, error) {
-	url := fmt.Sprintf("https://127.0.0.1:%s%s", c.port, endpoint)
-
-	req, err := http.NewRequest(method, url, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	// Basic auth
-	auth := base64.StdEncoding.EncodeToString([]byte("riot:" + c.authToken))
-	req.Header.Set("Authorization", "Basic "+auth)
-	req.Header.Set("Accept", "application/json")
-
-	resp, err := c.http.Do(req)
-	if err != nil {
-		ClearCache()
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, err
-	}
-
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("lcu api error: %s - %s", resp.Status, string(body))
-	}
-
-	return body, nil
-}
-
 // findFromProcess extracts LCU connection info from running process.
 func findFromProcess() (string, string, error) {
 	cmd := exec.Command("wmic", "process", "where", "name='LeagueClientUx.exe'", "get", "commandline")
@@ -214,7 +193,7 @@ func parseProcessArgs(output string) (string, string, error) {
 
 	portMatch := portRe.FindStringSubmatch(output)
 	if len(portMatch) < 2 {
-		return "", "", fmt.Errorf("league client not found")
+		return "", "", fmt.Errorf("league client port not found")
 	}
 
 	tokenMatch := tokenRe.FindStringSubmatch(output)
@@ -223,4 +202,24 @@ func parseProcessArgs(output string) (string, string, error) {
 	}
 
 	return portMatch[1], tokenMatch[1], nil
+}
+
+// Request makes a raw HTTP request to the LCU API.
+func (c *Client) Request(method, endpoint string, body io.Reader) ([]byte, error) {
+	resp, err := c.client.Request(method, endpoint, body)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	data, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return nil, fmt.Errorf("lcu api error: %s - %s", resp.Status, string(data))
+	}
+
+	return data, nil
 }

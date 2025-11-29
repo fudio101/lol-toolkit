@@ -35,14 +35,12 @@ func (c *Client) SearchByRiotID(riotID string) (*SummonerInfo, error) {
 	}
 
 	// Get account by Riot ID
-	c.waitForRateLimit()
 	account, err := c.golio.Riot.Account.GetByRiotID(gameName, tagLine)
 	if err != nil {
 		return nil, fmt.Errorf("account not found: %w", err)
 	}
 
 	// Get summoner by PUUID
-	c.waitForRateLimit()
 	summoner, err := c.golio.Riot.LoL.Summoner.GetByPUUID(account.Puuid)
 	if err != nil {
 		return nil, fmt.Errorf("summoner not found: %w", err)
@@ -62,14 +60,12 @@ func (c *Client) SearchByRiotID(riotID string) (*SummonerInfo, error) {
 
 // GetSummonerByPUUID fetches summoner info by PUUID
 func (c *Client) GetSummonerByPUUID(puuid string) (*SummonerInfo, error) {
-	c.waitForRateLimit()
 	summoner, err := c.golio.Riot.LoL.Summoner.GetByPUUID(puuid)
 	if err != nil {
 		return nil, err
 	}
 
 	// Also get account info for GameName and TagLine
-	c.waitForRateLimit()
 	account, err := c.golio.Riot.Account.GetByPUUID(puuid)
 	if err != nil {
 		// Return summoner info without GameName/TagLine if account lookup fails
@@ -81,14 +77,12 @@ func (c *Client) GetSummonerByPUUID(puuid string) (*SummonerInfo, error) {
 
 // GetSummonerByID fetches summoner info by summoner ID
 func (c *Client) GetSummonerByID(summonerID string) (*SummonerInfo, error) {
-	c.waitForRateLimit()
 	summoner, err := c.golio.Riot.LoL.Summoner.GetByID(summonerID)
 	if err != nil {
 		return nil, err
 	}
 
 	// Also get account info for GameName and TagLine
-	c.waitForRateLimit()
 	account, err := c.golio.Riot.Account.GetByPUUID(summoner.PUUID)
 	if err != nil {
 		return toSummonerInfo(summoner, "", ""), nil

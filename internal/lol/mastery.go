@@ -15,7 +15,6 @@ type ChampionMasteryInfo struct {
 
 // GetChampionMastery fetches champion mastery for a summoner and champion
 func (c *Client) GetChampionMastery(summonerID string, championID string) (*ChampionMasteryInfo, error) {
-	c.waitForRateLimit()
 	mastery, err := c.golio.Riot.LoL.ChampionMastery.Get(summonerID, championID)
 	if err != nil {
 		return nil, err
@@ -36,7 +35,6 @@ func (c *Client) GetChampionMastery(summonerID string, championID string) (*Cham
 
 // GetAllChampionMasteries fetches all champion masteries for a summoner
 func (c *Client) GetAllChampionMasteries(summonerID string) ([]*ChampionMasteryInfo, error) {
-	c.waitForRateLimit()
 	masteries, err := c.golio.Riot.LoL.ChampionMastery.List(summonerID)
 	if err != nil {
 		return nil, err
@@ -62,6 +60,5 @@ func (c *Client) GetAllChampionMasteries(summonerID string) ([]*ChampionMasteryI
 
 // GetTotalMasteryScore fetches the total mastery score for a summoner
 func (c *Client) GetTotalMasteryScore(summonerID string) (int, error) {
-	c.waitForRateLimit()
 	return c.golio.Riot.LoL.ChampionMastery.GetTotal(summonerID)
 }
