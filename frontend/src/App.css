@@ -1204,6 +1204,12 @@ body {
     color: var(--error);
 }
 
+.api-log-command {
+    color: var(--accent-text);
+    white-space: pre-wrap;
+    word-break: break-all;
+}
+
 .api-log-code-block {
     position: relative;
 }
@@ -1236,6 +1242,33 @@ body {
     background: var(--success);
     color: white;
     opacity: 1;
+}
+
+.api-copy-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 6px 12px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    background: rgba(59, 130, 246, 0.1);
+    border: 1px solid rgba(59, 130, 246, 0.3);
+    border-radius: var(--radius-sm);
+    color: rgb(96, 165, 250);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.api-copy-btn:hover {
+    background: rgba(59, 130, 246, 0.2);
+    border-color: rgba(59, 130, 246, 0.5);
+    color: rgb(147, 197, 253);
+}
+
+.api-copy-btn.copied {
+    background: rgba(34, 197, 94, 0.2);
+    border-color: rgba(34, 197, 94, 0.5);
+    color: rgb(74, 222, 128);
 }
 
 .api-log-section {

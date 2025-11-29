@@ -50,6 +50,57 @@ export function DebugTab({ summoner }: DebugTabProps) {
         }
     };
 
+    const isLCUConnected = (log: any): boolean => {
+        return log.type === 'lcu' && !!status?.port;
+    };
+
+    const buildLCUUrl = (endpoint: string): string => {
+        return `https://127.0.0.1:${status?.port}${endpoint}`;
+    };
+
+    const formatCurlHeaders = (headers: Record<string, string>): string => {
+        return Object.entries(headers)
+            .map(([key, value]) => ` \\\n  -H "${key}: ${value}"`)
+            .join('');
+    };
+
+    const formatPowerShellHeaders = (headers: Record<string, string>): string => {
+        const headerEntries = Object.entries(headers)
+            .map(([key, value]) => `\n    "${key}" = "${value}"`)
+            .join(';');
+        return ` \`\n  -Headers @{${headerEntries}\n  }`;
+    };
+
+    const generateCurlCommand = (log: any): string => {
+        if (!isLCUConnected(log)) {
+            return 'N/A - LCU not connected';
+        }
+
+        const url = buildLCUUrl(log.endpoint);
+        let command = `curl -k -X ${log.method} "${url}"`;
+
+        if (log.headers) {
+            command += formatCurlHeaders(log.headers);
+        }
+
+        return command;
+    };
+
+    const generatePowerShellCommand = (log: any): string => {
+        if (!isLCUConnected(log)) {
+            return 'N/A - LCU not connected';
+        }
+
+        const url = buildLCUUrl(log.endpoint);
+        let command = `Invoke-WebRequest -Uri "${url}" \`\n  -Method ${log.method} \`\n  -SkipCertificateCheck`;
+
+        if (log.headers && Object.keys(log.headers).length > 0) {
+            command += formatPowerShellHeaders(log.headers);
+        }
+
+        return command;
+    };
+
 
     return (
         <div className="tab-content">
@@ -88,9 +139,34 @@ export function DebugTab({ summoner }: DebugTabProps) {
                                 </div>
                                 {expandedLog === log.id && (
                                     <div className="api-log-details">
+                                        {log.type === 'lcu' && log.endpoint !== 'GetLCUStatus' && (
+                                            <div className="api-log-section" style={{ marginBottom: '12px' }}>
+                                                <div style={{ display: 'flex', gap: '8px' }}>
+                                                    <button 
+                                                        className={`api-copy-btn ${copiedId === `${log.id}-curl` ? 'copied' : ''}`}
+                                                        onClick={(e) => { 
+                                                            e.stopPropagation(); 
+                                                            copyToClipboard(generateCurlCommand(log), `${log.id}-curl`); 
+                                                        }}
+                                                        title="Copy cURL command"
+                                                    >
+                                                        {copiedId === `${log.id}-curl` ? '✓' : '📋'} cURL
+                                                    </button>
+                                                    <button 
+                                                        className={`api-copy-btn ${copiedId === `${log.id}-pwsh` ? 'copied' : ''}`}
+                                                        onClick={(e) => { 
+                                                            e.stopPropagation(); 
+                                                            copyToClipboard(generatePowerShellCommand(log), `${log.id}-pwsh`); 
+                                                        }}
+                                                        title="Copy PowerShell command"
+                                                    >
+                                                        {copiedId === `${log.id}-pwsh` ? '✓' : '📋'} PowerShell
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        )}
                                         {log.error && (
                                             <div className="api-log-section">
-                                                <div className="api-log-section-title">Error</div>
                                                 <div className="api-log-code-block">
                                                     <button 
                                                         className={`btn-copy-icon ${copiedId === `${log.id}-error` ? 'copied' : ''}`}
