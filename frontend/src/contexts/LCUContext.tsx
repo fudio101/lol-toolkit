@@ -99,25 +99,12 @@ export function LCUProvider({ children }: { children: ReactNode }) {
             setSummoner(null);
         } else if (isNewlyConnected) {
             // Immediately fetch summoner when connection is established
-            // Call fetchSummoner directly to bypass any polling guards
-            const fetchImmediately = async () => {
-                try {
-                    const summonerResult = await fetchSummoner();
-                    if (summonerResult) {
-                        handleSummonerResult(summonerResult);
-                    }
-                } catch (err) {
-                    // Errors are logged by the backend
-                }
-            };
-            fetchImmediately();
-            
-            // Also call refreshSummoner to reset the polling timer
+            // refreshSummoner will execute immediately and reset the polling timer
             if (summonerRefreshRef.current) {
                 summonerRefreshRef.current();
             }
         }
-    }, [fetchSummoner, handleSummonerResult]);
+    }, []);
 
     const handleStatusError = useCallback((err: Error) => {
         setError(err.message);
