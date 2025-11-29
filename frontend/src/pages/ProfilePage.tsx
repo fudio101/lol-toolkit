@@ -3,13 +3,12 @@ import { lcu } from '../../wailsjs/go/models';
 
 interface ProfilePageProps {
     summoner: lcu.CurrentSummoner | null;
-    onRefresh: () => void;
 }
 
-export function ProfilePage({ summoner, onRefresh }: ProfilePageProps) {
+export function ProfilePage({ summoner }: ProfilePageProps) {
     return (
         <div className="tab-content">
-            <UserCard summoner={summoner} onRefresh={onRefresh} />
+            <UserCard summoner={summoner} />
         </div>
     );
 }

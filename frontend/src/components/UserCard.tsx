@@ -2,47 +2,79 @@ import { lcu } from "../../wailsjs/go/models";
 
 interface UserCardProps {
     summoner: lcu.CurrentSummoner | null;
-    onRefresh: () => void;
 }
 
 const DDRAGON_VERSION = "14.23.1";
 
-export function UserCard({ summoner, onRefresh }: UserCardProps) {
+export function UserCard({ summoner }: UserCardProps) {
     if (!summoner) {
-        return (
-            <div className="user-card">
-                <div className="user-loading">Loading summoner data...</div>
-            </div>
-        );
+        return <LoadingSummonerCard />;
     }
-
-    const profileIconUrl = `https://ddragon.leagueoflegends.com/cdn/${DDRAGON_VERSION}/img/profileicon/${summoner.profileIconId}.png`;
 
     return (
         <div className="user-card">
-            <div className="user-avatar">
-                <img src={profileIconUrl} alt="Profile Icon" />
-                <span className="status-dot" />
-            </div>
-            <div className="user-info">
-                <div className="user-name">
-                    {summoner.gameName}
-                    <span className="user-tag">#{summoner.tagLine}</span>
-                </div>
-                <div className="user-level">Level {summoner.summonerLevel}</div>
-                <div className="user-xp">
-                    <div className="xp-bar">
-                        <div
-                            className="xp-fill"
-                            style={{ width: `${summoner.percentCompleteForNextLevel}%` }}
-                        />
-                    </div>
-                    <span className="xp-text">{summoner.percentCompleteForNextLevel}% to next level</span>
-                </div>
-            </div>
-            <button className="refresh-small" onClick={onRefresh} title="Refresh">
-                🔄
-            </button>
+            <UserAvatar iconId={summoner.profileIconId} />
+            <UserInfo summoner={summoner} />
         </div>
     );
+}
+
+function LoadingSummonerCard() {
+    return (
+        <div className="user-card">
+            <div className="user-loading">Loading summoner data...</div>
+        </div>
+    );
+}
+
+function UserAvatar({ iconId }: { iconId: number }) {
+    const profileIconUrl = getProfileIconUrl(iconId);
+    
+    return (
+        <div className="user-avatar">
+            <img src={profileIconUrl} alt="Profile Icon" />
+            <span className="status-dot" />
+        </div>
+    );
+}
+
+function UserInfo({ summoner }: { summoner: lcu.CurrentSummoner }) {
+    return (
+        <div className="user-info">
+            <UserName gameName={summoner.gameName} tagLine={summoner.tagLine} />
+            <UserLevel level={summoner.summonerLevel} />
+            <UserXP percentComplete={summoner.percentCompleteForNextLevel} />
+        </div>
+    );
+}
+
+function UserName({ gameName, tagLine }: { gameName: string; tagLine: string }) {
+    return (
+        <div className="user-name">
+            {gameName}
+            <span className="user-tag">#{tagLine}</span>
+        </div>
+    );
+}
+
+function UserLevel({ level }: { level: number }) {
+    return <div className="user-level">Level {level}</div>;
+}
+
+function UserXP({ percentComplete }: { percentComplete: number }) {
+    return (
+        <div className="user-xp">
+            <div className="xp-bar">
+                <div
+                    className="xp-fill"
+                    style={{ width: `${percentComplete}%` }}
+                />
+            </div>
+            <span className="xp-text">{percentComplete}% to next level</span>
+        </div>
+    );
+}
+
+function getProfileIconUrl(iconId: number): string {
+    return `https://ddragon.leagueoflegends.com/cdn/${DDRAGON_VERSION}/img/profileicon/${iconId}.png`;
 }

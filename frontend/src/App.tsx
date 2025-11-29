@@ -18,33 +18,29 @@ const TAB_TITLES: Record<TabId, string> = {
 function App() {
     const [activeTab, setActiveTab] = useState<TabId>('home');
     const { isConfigured, loading: configLoading } = useConfig();
-    const { status, summoner, loading: lcuLoading, refresh } = useLCU();
+    const { status, summoner, loading: lcuLoading } = useLCU();
 
+    const isLoading = configLoading || lcuLoading;
     const isConnected = status?.connected ?? false;
 
-    if (configLoading || lcuLoading) {
-        return (
-            <div className="app-layout">
-                <div className="loading-screen">
-                    <div className="spinner" />
-                    <p>Loading...</p>
-                </div>
-            </div>
-        );
+    if (isLoading) {
+        return <LoadingScreen />;
     }
 
     return (
         <div className="app-layout">
-            <Sidebar activeTab={activeTab} onTabChange={(tab) => setActiveTab(tab as TabId)} />
+            <Sidebar 
+                activeTab={activeTab} 
+                onTabChange={handleTabChange(setActiveTab)} 
+            />
             
             <main className="main-content">
-                <Header title={TAB_TITLES[activeTab] || 'Dashboard'} />
+                <Header title={getTabTitle(activeTab)} />
                 
                 <div className="content-area">
                     <TabContent 
                         tab={activeTab} 
                         summoner={summoner} 
-                        onRefresh={refresh}
                         isConnected={isConnected}
                         isConfigured={isConfigured}
                     />
@@ -54,15 +50,31 @@ function App() {
     );
 }
 
-function NotConnectedMessage({ onRefresh }: { onRefresh: () => void }) {
+function LoadingScreen() {
+    return (
+        <div className="app-layout">
+            <div className="loading-screen">
+                <div className="spinner" />
+                <p>Loading...</p>
+            </div>
+        </div>
+    );
+}
+
+function handleTabChange(setActiveTab: (tab: TabId) => void) {
+    return (tab: string) => setActiveTab(tab as TabId);
+}
+
+function getTabTitle(tab: TabId): string {
+    return TAB_TITLES[tab] || 'Dashboard';
+}
+
+function NotConnectedMessage() {
     return (
         <div className="message-card">
             <div className="message-icon">🔌</div>
             <h2>League Client Not Running</h2>
             <p>Please open the League of Legends client to use this app.</p>
-            <button className="btn-primary" onClick={onRefresh}>
-                Check Connection
-            </button>
         </div>
     );
 }
@@ -84,7 +96,6 @@ function ApiKeyRequiredMessage() {
 interface TabContentProps {
     tab: TabId;
     summoner: any;
-    onRefresh: () => void;
     isConnected: boolean;
     isConfigured: boolean;
 }
@@ -92,31 +103,43 @@ interface TabContentProps {
 // Tabs that don't require LCU connection
 const CONNECTION_FREE_TABS: TabId[] = ['settings', 'debug'];
 
-function TabContent({ tab, summoner, onRefresh, isConnected, isConfigured }: TabContentProps) {
-    // Settings and Debug are always accessible
-    if (CONNECTION_FREE_TABS.includes(tab)) {
-        switch (tab) {
-            case 'settings':
-                return <SettingsTab />;
-            case 'debug':
-                return <DebugTab summoner={summoner} />;
-        }
+function TabContent({ tab, summoner, isConnected, isConfigured }: TabContentProps) {
+    if (isConnectionFreeTab(tab)) {
+        return renderConnectionFreeTab(tab, summoner);
     }
 
-    // Other tabs require connection
     if (!isConnected) {
-        return <NotConnectedMessage onRefresh={onRefresh} />;
+        return <NotConnectedMessage />;
     }
 
     if (!isConfigured) {
         return <ApiKeyRequiredMessage />;
     }
 
+    return renderConnectedTab(tab, summoner);
+}
+
+function isConnectionFreeTab(tab: TabId): boolean {
+    return CONNECTION_FREE_TABS.includes(tab);
+}
+
+function renderConnectionFreeTab(tab: TabId, summoner: any) {
+    switch (tab) {
+        case 'settings':
+            return <SettingsTab />;
+        case 'debug':
+            return <DebugTab summoner={summoner} />;
+        default:
+            return null;
+    }
+}
+
+function renderConnectedTab(tab: TabId, summoner: any) {
     switch (tab) {
         case 'home':
-            return <HomeTab summoner={summoner} onRefresh={onRefresh} />;
+            return <HomeTab summoner={summoner} />;
         case 'profile':
-            return <ProfileTab summoner={summoner} onRefresh={onRefresh} />;
+            return <ProfileTab summoner={summoner} />;
         case 'champions':
             return <ChampionsTab />;
         case 'matches':

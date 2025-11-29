@@ -3,23 +3,31 @@ import { lcu } from '../../wailsjs/go/models';
 
 interface HomeTabProps {
     summoner: lcu.CurrentSummoner | null;
-    onRefresh: () => void;
 }
 
-export function HomeTab({ summoner, onRefresh }: HomeTabProps) {
+export function HomeTab({ summoner }: HomeTabProps) {
     return (
         <div className="tab-content">
-            <UserCard summoner={summoner} onRefresh={onRefresh} />
-            <div className="quick-stats">
-                <div className="stat-card">
-                    <span className="stat-icon">🎮</span>
-                    <span className="stat-label">Ready to Play</span>
-                </div>
-                <div className="stat-card">
-                    <span className="stat-icon">📈</span>
-                    <span className="stat-label">Stats Available</span>
-                </div>
-            </div>
+            <UserCard summoner={summoner} />
+            <QuickStats />
+        </div>
+    );
+}
+
+function QuickStats() {
+    return (
+        <div className="quick-stats">
+            <StatCard icon="🎮" label="Ready to Play" />
+            <StatCard icon="📈" label="Stats Available" />
+        </div>
+    );
+}
+
+function StatCard({ icon, label }: { icon: string; label: string }) {
+    return (
+        <div className="stat-card">
+            <span className="stat-icon">{icon}</span>
+            <span className="stat-label">{label}</span>
         </div>
     );
 }

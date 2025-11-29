@@ -4,10 +4,9 @@ import { lcu } from '../../wailsjs/go/models';
 
 interface ProfileTabProps {
     summoner: lcu.CurrentSummoner | null;
-    onRefresh: () => void;
 }
 
-export function ProfileTab({ summoner, onRefresh }: ProfileTabProps) {
+export function ProfileTab({ summoner }: ProfileTabProps) {
     const [copiedField, setCopiedField] = useState<string | null>(null);
 
     const copyToClipboard = async (text: string, field: string) => {
@@ -36,7 +35,7 @@ export function ProfileTab({ summoner, onRefresh }: ProfileTabProps) {
 
     return (
         <div className="tab-content">
-            <UserCard summoner={summoner} onRefresh={onRefresh} />
+            <UserCard summoner={summoner} />
 
             {/* Two Column Layout */}
             <div className="profile-two-col">

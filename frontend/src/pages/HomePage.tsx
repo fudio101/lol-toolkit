@@ -3,23 +3,37 @@ import { lcu } from '../../wailsjs/go/models';
 
 interface HomePageProps {
     summoner: lcu.CurrentSummoner | null;
-    onRefresh: () => void;
 }
 
-export function HomePage({ summoner, onRefresh }: HomePageProps) {
+const QUICK_STATS = [
+    { icon: '🎮', label: 'Ready to Play' },
+    { icon: '📈', label: 'Stats Available' },
+] as const;
+
+export function HomePage({ summoner }: HomePageProps) {
     return (
         <div className="tab-content">
-            <UserCard summoner={summoner} onRefresh={onRefresh} />
-            <div className="quick-stats">
-                <div className="stat-card">
-                    <span className="stat-icon">🎮</span>
-                    <span className="stat-label">Ready to Play</span>
-                </div>
-                <div className="stat-card">
-                    <span className="stat-icon">📈</span>
-                    <span className="stat-label">Stats Available</span>
-                </div>
-            </div>
+            <UserCard summoner={summoner} />
+            <QuickStats stats={QUICK_STATS} />
+        </div>
+    );
+}
+
+function QuickStats({ stats }: { stats: readonly { icon: string; label: string }[] }) {
+    return (
+        <div className="quick-stats">
+            {stats.map((stat, index) => (
+                <StatCard key={index} icon={stat.icon} label={stat.label} />
+            ))}
+        </div>
+    );
+}
+
+function StatCard({ icon, label }: { icon: string; label: string }) {
+    return (
+        <div className="stat-card">
+            <span className="stat-icon">{icon}</span>
+            <span className="stat-label">{label}</span>
         </div>
     );
 }
