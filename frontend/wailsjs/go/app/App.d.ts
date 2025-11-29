@@ -21,8 +21,6 @@ export function GetLCUStatus():Promise<app.LCUStatus>;
 
 export function GetMasters(arg1:string):Promise<lol.LeagueListInfo>;
 
-export function GetOwnedChampions():Promise<Array<lcu.Champion>>;
-
 export function GetRankedStats(arg1:string):Promise<Array<lol.RankedInfo>>;
 
 export function GetSummonerByID(arg1:string):Promise<lol.SummonerInfo>;
@@ -30,6 +28,8 @@ export function GetSummonerByID(arg1:string):Promise<lol.SummonerInfo>;
 export function GetSummonerByPUUID(arg1:string):Promise<lol.SummonerInfo>;
 
 export function GetTotalMasteryScore(arg1:string):Promise<number>;
+
+export function IsAutoAcceptRunning():Promise<boolean>;
 
 export function IsConfigured():Promise<boolean>;
 
@@ -39,8 +39,8 @@ export function SetAPIKey(arg1:string):Promise<void>;
 
 export function SetRegion(arg1:string):Promise<void>;
 
-export function StartAutoPick(arg1:app.AutoPickConfig):Promise<void>;
+export function StartAutoAccept(arg1:app.AutoAcceptConfig):Promise<void>;
 
-export function StopAutoPick():Promise<void>;
+export function StopAutoAccept():Promise<void>;
 
-export function UpdateAutoPickConfig(arg1:app.AutoPickConfig):Promise<void>;
+export function UpdateAutoAcceptConfig(arg1:app.AutoAcceptConfig):Promise<void>;

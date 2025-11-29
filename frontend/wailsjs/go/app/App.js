@@ -34,10 +34,6 @@ export function GetMasters(arg1) {
   return window['go']['app']['App']['GetMasters'](arg1);
 }
 
-export function GetOwnedChampions() {
-  return window['go']['app']['App']['GetOwnedChampions']();
-}
-
 export function GetRankedStats(arg1) {
   return window['go']['app']['App']['GetRankedStats'](arg1);
 }
@@ -52,6 +48,10 @@ export function GetSummonerByPUUID(arg1) {
 
 export function GetTotalMasteryScore(arg1) {
   return window['go']['app']['App']['GetTotalMasteryScore'](arg1);
+}
+
+export function IsAutoAcceptRunning() {
+  return window['go']['app']['App']['IsAutoAcceptRunning']();
 }
 
 export function IsConfigured() {
@@ -70,14 +70,14 @@ export function SetRegion(arg1) {
   return window['go']['app']['App']['SetRegion'](arg1);
 }
 
-export function StartAutoPick(arg1) {
-  return window['go']['app']['App']['StartAutoPick'](arg1);
+export function StartAutoAccept(arg1) {
+  return window['go']['app']['App']['StartAutoAccept'](arg1);
 }
 
-export function StopAutoPick() {
-  return window['go']['app']['App']['StopAutoPick']();
+export function StopAutoAccept() {
+  return window['go']['app']['App']['StopAutoAccept']();
 }
 
-export function UpdateAutoPickConfig(arg1) {
-  return window['go']['app']['App']['UpdateAutoPickConfig'](arg1);
+export function UpdateAutoAcceptConfig(arg1) {
+  return window['go']['app']['App']['UpdateAutoAcceptConfig'](arg1);
 }

@@ -21,85 +21,86 @@ type LCUStatus struct {
 }
 
 // GetLCUStatus checks if the League client is running.
-// This is treated as a backend API call for logging/telemetry purposes.
 func (a *App) GetLCUStatus() *LCUStatus {
 	start := time.Now()
 	info := lcu.GetConnectionInfo()
 	duration := time.Since(start)
 
-	// Emit a synthetic backend API log so the Debug panel sees this call too.
-	headers := buildLCUHeaders(info)
+	lcu.SetConnectionStatus(info != nil)
 
-	var status *LCUStatus
-	if info == nil {
-		status = &LCUStatus{
-			Connected: false,
-			Error:     "League client not running",
-		}
-		statusJSON, _ := json.MarshalIndent(status, "", "  ")
-		runtime.EventsEmit(a.ctx, "api-call", map[string]interface{}{
-			"type":       "lcu",
-			"method":     "GET",
-			"endpoint":   "GetLCUStatus",
-			"statusCode": http.StatusInternalServerError,
-			"duration":   duration.Milliseconds(),
-			"headers":    headers,
-			"response":   string(statusJSON),
-			"error":      "League client not running",
-		})
-
-		return status
-	}
-
-	status = &LCUStatus{
-		Connected: true,
-		Port:      info.Port,
-		AuthToken: info.AuthToken,
-	}
-	statusJSON, _ := json.MarshalIndent(status, "", "  ")
-	runtime.EventsEmit(a.ctx, "api-call", map[string]interface{}{
-		"type":       "lcu",
-		"method":     "GET",
-		"endpoint":   "GetLCUStatus",
-		"statusCode": http.StatusOK,
-		"duration":   duration.Milliseconds(),
-		"headers":    headers,
-		"response":   string(statusJSON),
-	})
+	status := a.createStatus(info)
+	a.emitStatusLog(status, duration, info)
 
 	return status
-}
-
-// base64Encode encodes a string to base64.
-func base64Encode(s string) string {
-	return base64.StdEncoding.EncodeToString([]byte(s))
 }
 
 // GetCurrentSummoner returns the currently logged in summoner.
 func (a *App) GetCurrentSummoner() (*lcu.CurrentSummoner, error) {
 	start := time.Now()
 
-	// Get connection info for headers
-	info := lcu.GetConnectionInfo()
-	headers := buildLCUHeaders(info)
-
 	client, err := lcu.NewClient()
 	if err != nil {
-		// Log error when client initialization fails
-		runtime.EventsEmit(a.ctx, "api-call", map[string]interface{}{
-			"type":       "lcu",
-			"method":     "GET",
-			"endpoint":   "/lol-summoner/v1/current-summoner",
-			"statusCode": http.StatusInternalServerError,
-			"duration":   time.Since(start).Milliseconds(),
-			"headers":    headers,
-			"error":      err.Error(),
-		})
+		a.emitSummonerError(err, time.Since(start))
 		return nil, err
 	}
 
-	// GetCurrentSummoner will log its own errors and success
 	return client.GetCurrentSummoner()
+}
+
+// createStatus creates an LCUStatus from connection info.
+func (a *App) createStatus(info *lcu.ConnectionInfo) *LCUStatus {
+	if info == nil {
+		return &LCUStatus{
+			Connected: false,
+			Error:     "League client not running",
+		}
+	}
+
+	return &LCUStatus{
+		Connected: true,
+		Port:      info.Port,
+		AuthToken: info.AuthToken,
+	}
+}
+
+// emitStatusLog emits a status check log event to the frontend.
+func (a *App) emitStatusLog(status *LCUStatus, duration time.Duration, info *lcu.ConnectionInfo) {
+	statusJSON, _ := json.MarshalIndent(status, "", "  ")
+	headers := buildLCUHeaders(info)
+
+	logEntry := map[string]interface{}{
+		"type":     "lcu",
+		"method":   "GET",
+		"endpoint": "GetLCUStatus",
+		"duration": duration.Milliseconds(),
+		"headers":  headers,
+		"response": string(statusJSON),
+	}
+
+	if status.Connected {
+		logEntry["statusCode"] = http.StatusOK
+	} else {
+		logEntry["statusCode"] = http.StatusInternalServerError
+		logEntry["error"] = status.Error
+	}
+
+	runtime.EventsEmit(a.ctx, "api-call", logEntry)
+}
+
+// emitSummonerError emits an error log event for summoner fetch failures.
+func (a *App) emitSummonerError(err error, duration time.Duration) {
+	info := lcu.GetConnectionInfo()
+	headers := buildLCUHeaders(info)
+
+	runtime.EventsEmit(a.ctx, "api-call", map[string]interface{}{
+		"type":       "lcu",
+		"method":     "GET",
+		"endpoint":   "/lol-summoner/v1/current-summoner",
+		"statusCode": http.StatusInternalServerError,
+		"duration":   duration.Milliseconds(),
+		"headers":    headers,
+		"error":      err.Error(),
+	})
 }
 
 // buildLCUHeaders creates HTTP headers for LCU API requests.
@@ -110,4 +111,9 @@ func buildLCUHeaders(info *lcu.ConnectionInfo) map[string]string {
 	}
 	headers["Accept"] = "application/json"
 	return headers
+}
+
+// base64Encode encodes a string to base64.
+func base64Encode(s string) string {
+	return base64.StdEncoding.EncodeToString([]byte(s))
 }

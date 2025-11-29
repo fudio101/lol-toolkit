@@ -6,6 +6,7 @@ import (
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 
 	"lol-toolkit/internal/config"
+	"lol-toolkit/internal/lcu"
 	"lol-toolkit/internal/logger"
 	"lol-toolkit/internal/lol"
 )
@@ -25,15 +26,26 @@ func New() *App {
 // Startup initializes the app when Wails starts.
 func (a *App) Startup(ctx context.Context) {
 	a.ctx = ctx
+	a.setupLogging()
+	a.setupLCUCallbacks()
+	a.loadConfig()
+	a.initLolClient()
+}
 
-	// Wire backend API logging (both LCU and Riot) to frontend via Wails events.
-	// Both lcu and lol packages use the shared logger, so we only need to set it once.
+// setupLogging configures API logging to emit events to the frontend.
+func (a *App) setupLogging() {
 	logger.SetAPILogger(func(entry logger.APILogEntry) {
 		runtime.EventsEmit(a.ctx, "api-call", entry)
 	})
+}
 
-	a.loadConfig()
-	a.initLolClient()
+// setupLCUCallbacks sets up callbacks for LCU connection status changes.
+func (a *App) setupLCUCallbacks() {
+	lcu.SetOnStatusChange(func(connected bool) {
+		runtime.EventsEmit(a.ctx, "lcu-status-changed", map[string]interface{}{
+			"connected": connected,
+		})
+	})
 }
 
 // Shutdown cleans up resources when the app closes.
@@ -71,33 +83,31 @@ func (a *App) GetConfig() *config.Config {
 // SetAPIKey updates the Riot API key and reinitializes the client.
 func (a *App) SetAPIKey(apiKey string) error {
 	a.config.RiotAPIKey = apiKey
-
-	if apiKey != "" {
-		client, err := lol.NewClient(apiKey, a.config.Region)
-		if err != nil {
-			return err
-		}
-		a.lolClient = client
-	} else {
-		a.lolClient = nil
-	}
-
+	a.updateLolClient()
 	return config.Save(a.config)
 }
 
 // SetRegion updates the region and reinitializes the client.
 func (a *App) SetRegion(region string) error {
 	a.config.Region = region
+	a.updateLolClient()
+	return config.Save(a.config)
+}
 
-	if a.config.RiotAPIKey != "" {
-		client, err := lol.NewClient(a.config.RiotAPIKey, region)
-		if err != nil {
-			return err
-		}
-		a.lolClient = client
+// updateLolClient updates the LoL client based on current config.
+func (a *App) updateLolClient() {
+	if a.config.RiotAPIKey == "" {
+		a.lolClient = nil
+		return
 	}
 
-	return config.Save(a.config)
+	client, err := lol.NewClient(a.config.RiotAPIKey, a.config.Region)
+	if err != nil {
+		a.lolClient = nil
+		return
+	}
+
+	a.lolClient = client
 }
 
 // IsConfigured returns true if the API key is set.

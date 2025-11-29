@@ -87,22 +87,14 @@ func NewClient() (*Client, error) {
 
 // GetCurrentSummoner returns the currently logged in summoner.
 func (c *Client) GetCurrentSummoner() (*CurrentSummoner, error) {
-	// Get connection info for headers
-	_, token, _ := getConnectionInfo()
-	headers := make(map[string]string)
-	if token != "" {
-		headers["Authorization"] = fmt.Sprintf("Basic %s", base64Encode(fmt.Sprintf("riot:%s", token)))
-	}
-	headers["Accept"] = "application/json"
+	headers := buildClientHeaders()
 
-	// Wrap the API call with automatic logging - type-safe with generics
 	return LoggedCall("GET", "/lol-summoner/v1/current-summoner", http.StatusOK, headers, func() (*CurrentSummoner, error) {
-		// Use lcu-gopher's built-in method
 		lcuSummoner, err := c.client.GetCurrentSummoner()
 		if err != nil {
 			return nil, err
 		}
-		// Convert to our exported type
+
 		return &CurrentSummoner{
 			AccountID:                   lcuSummoner.AccountID,
 			DisplayName:                 lcuSummoner.DisplayName,
@@ -126,6 +118,17 @@ func (c *Client) GetCurrentSummoner() (*CurrentSummoner, error) {
 			XpUntilNextLevel: lcuSummoner.XpUntilNextLevel,
 		}, nil
 	})
+}
+
+// buildClientHeaders creates HTTP headers for LCU API requests.
+func buildClientHeaders() map[string]string {
+	_, token, _ := getConnectionInfo()
+	headers := make(map[string]string)
+	if token != "" {
+		headers["Authorization"] = fmt.Sprintf("Basic %s", base64Encode(fmt.Sprintf("riot:%s", token)))
+	}
+	headers["Accept"] = "application/json"
+	return headers
 }
 
 // GetConnectionInfo returns the current LCU connection info, or nil if not connected.
@@ -221,40 +224,68 @@ func base64Encode(s string) string {
 
 // Request makes a raw HTTP request to the LCU API and logs it.
 func (c *Client) Request(method, endpoint string, body io.Reader) ([]byte, error) {
-	start := time.Now()
+	if endpoint != "GetLCUStatus" && !IsConnected() {
+		return c.handleDisconnected(method, endpoint)
+	}
 
-	// Get connection info for headers
-	_, token, _ := getConnectionInfo()
-	headers := make(map[string]string)
-	if token != "" {
-		headers["Authorization"] = fmt.Sprintf("Basic %s", base64Encode(fmt.Sprintf("riot:%s", token)))
-	}
-	headers["Accept"] = "application/json"
-	if body != nil {
-		headers["Content-Type"] = "application/json"
-	}
+	start := time.Now()
+	headers := c.buildRequestHeaders(body)
 
 	resp, err := c.client.Request(method, endpoint, body)
 	duration := time.Since(start)
 
-	// Log network errors before returning
 	if err != nil {
-		LogError(method, endpoint, duration, headers, err) // Will extract status code from error
-		return nil, err
+		return c.handleRequestError(method, endpoint, duration, headers, err)
 	}
 	defer resp.Body.Close()
 
 	data, err := io.ReadAll(resp.Body)
 	if err != nil {
-		LogError(method, endpoint, duration, headers, err) // Will extract status code from error
-		return nil, err
+		return c.handleReadError(method, endpoint, duration, headers, err)
 	}
 
+	return c.handleResponse(method, endpoint, resp, data, duration, headers)
+}
+
+// handleDisconnected handles requests when client is disconnected.
+func (c *Client) handleDisconnected(method, endpoint string) ([]byte, error) {
+	err := fmt.Errorf("league client not connected")
+	headers := buildClientHeaders()
+	LogError(method, endpoint, 0, headers, err)
+	return nil, err
+}
+
+// buildRequestHeaders builds headers for an HTTP request.
+func (c *Client) buildRequestHeaders(body io.Reader) map[string]string {
+	headers := buildClientHeaders()
+	if body != nil {
+		headers["Content-Type"] = "application/json"
+	}
+	return headers
+}
+
+// handleRequestError handles errors from the HTTP request.
+func (c *Client) handleRequestError(method, endpoint string, duration time.Duration, headers map[string]string, err error) ([]byte, error) {
+	LogError(method, endpoint, duration, headers, err)
+	HandleConnectionError(err, endpoint)
+	return nil, err
+}
+
+// handleReadError handles errors from reading the response body.
+func (c *Client) handleReadError(method, endpoint string, duration time.Duration, headers map[string]string, err error) ([]byte, error) {
+	LogError(method, endpoint, duration, headers, err)
+	HandleConnectionError(err, endpoint)
+	return nil, err
+}
+
+// handleResponse handles the HTTP response.
+func (c *Client) handleResponse(method, endpoint string, resp *http.Response, data []byte, duration time.Duration, headers map[string]string) ([]byte, error) {
 	responseBody := string(data)
+
 	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
-		// Log error with response body in error field
-		LogRequest(method, endpoint, resp.StatusCode, duration, headers, responseBody, fmt.Errorf("lcu api error: %s - %s", resp.Status, responseBody))
-		return nil, fmt.Errorf("lcu api error: %s - %s", resp.Status, responseBody)
+		err := fmt.Errorf("lcu api error: %s - %s", resp.Status, responseBody)
+		LogRequest(method, endpoint, resp.StatusCode, duration, headers, responseBody, err)
+		return nil, err
 	}
 
 	LogSuccess(method, endpoint, resp.StatusCode, duration, headers, responseBody)

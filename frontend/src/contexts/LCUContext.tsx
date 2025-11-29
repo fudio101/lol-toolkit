@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useCallback, useRef, ReactNode, useEffect } from 'react';
+import { EventsOn } from '../../wailsjs/runtime/runtime';
 import { GetLCUStatus, GetCurrentSummoner } from "../../wailsjs/go/app/App";
 import { lcu, app } from "../../wailsjs/go/models";
 import { usePolling } from '../hooks';
@@ -28,15 +29,14 @@ export function LCUProvider({ children }: { children: ReactNode }) {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     
-    // Refs for tracking state and function references
     const statusRef = useRef(status);
-    // Keep statusRef updated
+    const prevConnectedRef = useRef<boolean | null>(null);
+    const summonerRefreshRef = useRef<(() => Promise<void>) | null>(null);
+    const handleStatusResultRef = useRef<((result: app.LCUStatus) => void) | null>(null);
+
     useEffect(() => {
         statusRef.current = status;
     }, [status]);
-    
-    const prevConnectedRef = useRef<boolean | null>(null);
-    const summonerRefreshRef = useRef<(() => Promise<void>) | null>(null);
 
     // ============================================================================
     // Status Polling
@@ -52,20 +52,45 @@ export function LCUProvider({ children }: { children: ReactNode }) {
             : INTERVAL.STATUS_DISCONNECTED;
     }, []);
 
+    const handleStatusResult = useCallback((result: app.LCUStatus) => {
+        statusRef.current = result;
+        
+        const wasConnected = prevConnectedRef.current;
+        const isNowConnected = result.connected === true;
+        const isNewlyConnected = (wasConnected === null || wasConnected === false) && isNowConnected;
+        
+        prevConnectedRef.current = isNowConnected;
+        
+        setStatus(result);
+        setError(null);
+        setLoading(false);
+        
+        // Handle summoner based on connection
+        if (!result.connected) {
+            setSummoner(null);
+        } else if (isNewlyConnected && summonerRefreshRef.current) {
+            summonerRefreshRef.current();
+        }
+    }, []);
+
+    // Store handleStatusResult in ref for use in fetchSummoner
+    useEffect(() => {
+        handleStatusResultRef.current = handleStatusResult;
+    }, [handleStatusResult]);
+
     // ============================================================================
-    // Summoner Functions (defined early so they can be used in handleStatusResult)
+    // Summoner Functions
     // ============================================================================
 
     const fetchSummoner = useCallback(async (): Promise<lcu.CurrentSummoner | null> => {
-        // Only fetch if connected
         if (!statusRef.current?.connected) {
             return null;
         }
 
         try {
             return await GetCurrentSummoner();
-        } catch (err) {
-            // Errors are logged by the backend, just return null
+        } catch {
+            // Backend handles errors and emits events
             return null;
         }
     }, []);
@@ -73,36 +98,6 @@ export function LCUProvider({ children }: { children: ReactNode }) {
     const handleSummonerResult = useCallback((result: lcu.CurrentSummoner | null) => {
         if (result) {
             setSummoner(result);
-        }
-    }, []);
-
-    const handleStatusResult = useCallback((result: app.LCUStatus) => {
-        // Update statusRef immediately so fetchSummoner can use it
-        statusRef.current = result;
-        
-        const wasConnected = prevConnectedRef.current;
-        const isNowConnected = result.connected === true;
-        
-        // Detect transition: (null/false) → true
-        const wasNotConnected = wasConnected === null || wasConnected === false;
-        const isNewlyConnected = wasNotConnected && isNowConnected;
-        
-        // Update ref before calling setStatus
-        prevConnectedRef.current = isNowConnected;
-        
-        setStatus(result);
-        setError(null);
-        setLoading(false);
-        
-        // Clear summoner if disconnected
-        if (!result.connected) {
-            setSummoner(null);
-        } else if (isNewlyConnected) {
-            // Immediately fetch summoner when connection is established
-            // refreshSummoner will execute immediately and reset the polling timer
-            if (summonerRefreshRef.current) {
-                summonerRefreshRef.current();
-            }
         }
     }, []);
 
@@ -153,21 +148,54 @@ export function LCUProvider({ children }: { children: ReactNode }) {
         summonerRefreshRef.current = refreshSummoner;
     }, [refreshSummoner]);
 
-    // Backup handler: Watch for connection state changes in case handleStatusResult misses it
+    // Backup handler for connection state changes
     useEffect(() => {
-        if (status === null) {
-            return;
-        }
+        if (!status) return;
 
         const isNowConnected = status.connected === true;
         const wasConnected = prevConnectedRef.current;
-        const wasNotConnected = wasConnected === null || wasConnected === false;
-        const isNewlyConnected = wasNotConnected && isNowConnected;
+        const isNewlyConnected = (wasConnected === null || wasConnected === false) && isNowConnected;
 
         if (isNewlyConnected && summonerRefreshRef.current) {
             summonerRefreshRef.current();
         }
     }, [status]);
+
+    // ============================================================================
+    // Listen for backend status change events
+    // ============================================================================
+
+    useEffect(() => {
+        let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+        const DEBOUNCE_MS = 500;
+
+        const unsubscribe = EventsOn('lcu-status-changed', (data: any) => {
+            if (!data || typeof data.connected !== 'boolean') return;
+
+            if (debounceTimer) {
+                clearTimeout(debounceTimer);
+            }
+
+            debounceTimer = setTimeout(() => {
+                const currentConnected = statusRef.current?.connected ?? false;
+
+                if (currentConnected !== data.connected) {
+                    const newStatus: app.LCUStatus = {
+                        connected: data.connected,
+                        error: data.connected ? undefined : 'League client connection refused',
+                    };
+                    handleStatusResult(newStatus);
+                }
+            }, DEBOUNCE_MS);
+        });
+
+        return () => {
+            if (debounceTimer) {
+                clearTimeout(debounceTimer);
+            }
+            unsubscribe();
+        };
+    }, [handleStatusResult]);
 
     // ============================================================================
     // Public API
